@@ -1,10 +1,10 @@
-pub(crate) fn spawn_local<F: Future>(future: F) {
+pub(crate) fn spawn_local<F: Future<Output = ()> + 'static>(future: F) {
     #[cfg(target_arch = "wasm32")]
     {
-        todo!();
+        wasm_bindgen_futures::spawn_local(future);
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        todo!();
+        tokio::task::spawn_local(future);
     }
 }

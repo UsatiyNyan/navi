@@ -6,3 +6,9 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.104"
 proto = { path = "../proto" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.53.1", features = ["rt"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4.78"

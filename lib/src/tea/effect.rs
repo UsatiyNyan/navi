@@ -13,7 +13,9 @@ pub type Effects<Message> = Vec<Effect<Message>>;
 // FOR LATER: don't like Box<dyn> here
 pub type Effect<Message> = Box<dyn FnOnce(Dispatch<Message>)>;
 
-pub fn from_future<Message, F: Future<Output = Message> + 'static>(future: F) -> Effect<Message> {
+pub fn from_future<Message: 'static, F: Future<Output = Message> + 'static>(
+    future: F,
+) -> Effect<Message> {
     Box::new(move |dispatch| {
         platform::spawn_local(async move {
             let msg = future.await;
