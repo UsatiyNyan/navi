@@ -20,11 +20,8 @@ where
         input::Input::new(self.dispatch.clone())
     }
 
-    pub fn new<Init>(init: Init) -> Self
-    where
-        Init: FnOnce() -> (Model, effect::Effects<Message>),
-    {
-        let (model, effects_init) = (init)();
+    pub fn new() -> Self {
+        let (model, effects_init) = Model::init();
         let queue = Rc::new(RefCell::new(VecDeque::<Message>::new()));
         let dispatch = effect::Dispatch::new(&queue);
         let a_self = Self {
@@ -39,9 +36,9 @@ where
     }
 
     pub fn run_once(&mut self) -> Option<&Model> {
+        let mut effects_batch: effect::Effects<Message> = Default::default();
         let mut is_changed = false;
 
-        let mut effects_batch: effect::Effects<Message> = Default::default();
         while let Some(message) = self.drain_once() {
             let effects_once = self.model.update(message);
             effects_batch.extend(effects_once);
