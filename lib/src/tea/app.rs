@@ -1,5 +1,5 @@
-use super::effect;
-use super::model;
+use super::{effect, input, model};
+
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 pub struct App<Model, Message> {
@@ -14,6 +14,10 @@ where
 {
     pub fn model(&self) -> &Model {
         &self.model
+    }
+
+    pub fn input(&self) -> input::Input<Message> {
+        input::Input::new(self.dispatch.clone())
     }
 
     pub fn new<Init>(init: Init) -> Self

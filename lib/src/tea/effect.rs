@@ -36,7 +36,7 @@ impl<Message> Clone for Dispatch<Message> {
     }
 }
 impl<Message> Dispatch<Message> {
-    pub fn new(queue: &Rc<RefCell<VecDeque<Message>>>) -> Self {
+    pub(crate) fn new(queue: &Rc<RefCell<VecDeque<Message>>>) -> Self {
         Self {
             queue: Rc::downgrade(queue),
         }
