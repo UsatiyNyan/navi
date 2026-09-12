@@ -21,6 +21,7 @@
         bases = ["nix" "rust" "js"];
         extraBuildInputs = with pkgs; [
           just
+          lld
         ];
         extraShellHook = ''
         '';
