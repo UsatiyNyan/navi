@@ -13,6 +13,9 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "lib",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -68,8 +71,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "proto",
- "tokio",
- "wasm-bindgen-futures",
 ]
 
 [[package]]
