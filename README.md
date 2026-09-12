@@ -27,3 +27,16 @@ Two things about the shape of this plan:
 **The natural stopping points are after Phase 3** (a live event loop with fake streaming — the whole runtime, no real content) and **after Phase 5** (interactive 3D — a real app, minus real data). Each is a demoable milestone. If motivation flags, those are where you rest.
 
 So the very first concrete thing: Phase 0, window + clear. But before you touch code — one sequencing decision is *yours*, because it reveals whether you've internalized the core idea. I put "build the MVU spine" (Phase 1) *before* "render a cube" (Phase 4). Some people would swap them — cube first, it's more fun and more visible. Make the call for your own build and defend it: does the spine come before the cube, or the cube before the spine? Your answer tells me whether the architecture is load-bearing in your head yet or still decoration. Which order, and why?
+
+## TODO: wasm host API and crate shape
+
+- Treat `app` primarily as a library (host-controlled runtime), not as a required executable.
+- Keep native CLI loop as an optional binary (`app-cli`) only for local debugging.
+- For wasm integration, do not rely on `main` as the product entrypoint.
+- Define exported host-facing state/callback API in phases:
+  - `init`/`new` returns app state handle
+  - `send` enqueues messages from JS/UI events
+  - `tick`/`run_once` advances TEA runtime one turn
+  - `snapshot`/`view` reads model-derived output for rendering
+- Add wasm scheduling phase later (RAF/event callback wiring outside TEA core).
+- Until that phase is done, wasm executable parity is intentionally not required.
