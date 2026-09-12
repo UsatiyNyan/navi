@@ -1,51 +1,19 @@
-use super::platform;
-
-use std::{
-    cell::RefCell,
-    collections::VecDeque,
-    rc::{Rc, Weak},
-};
-
-use anyhow::Context;
+use super::capabilities::Capabilities;
+use std::future::Future;
 
 pub type Effects<Message> = Vec<Effect<Message>>;
-
-// FOR LATER: don't like Box<dyn> here
-pub type Effect<Message> = Box<dyn FnOnce(Dispatch<Message>)>;
+pub type Effect<Message> = Box<dyn FnOnce(&Capabilities<Message>)>; // FOR LATER: don't like Box<dyn> here
 
 pub fn from_future<Message: 'static, F: Future<Output = Message> + 'static>(
     future: F,
 ) -> Effect<Message> {
-    Box::new(move |dispatch| {
-        platform::spawn_local(async move {
-            let msg = future.await;
-            let _ = dispatch.call(msg);
-        })
+    Box::new(move |capabilities| {
+        let capability_emit = capabilities.emitter();
+        capabilities.spawn(Box::pin(async move {
+            let message = future.await;
+            if let Some(emitter) = capability_emit.upgrade() {
+                emitter.emit(message);
+            }
+        }));
     })
-}
-
-// FOR LATER: don't like Clone impl here
-pub struct Dispatch<Message> {
-    queue: Weak<RefCell<VecDeque<Message>>>,
-}
-impl<Message> Clone for Dispatch<Message> {
-    fn clone(&self) -> Self {
-        Self {
-            queue: self.queue.clone(),
-        }
-    }
-}
-impl<Message> Dispatch<Message> {
-    pub(crate) fn new(queue: &Rc<RefCell<VecDeque<Message>>>) -> Self {
-        Self {
-            queue: Rc::downgrade(queue),
-        }
-    }
-
-    pub fn call(&self, message: Message) -> anyhow::Result<()> {
-        let queue = self.queue.upgrade().context("queue expired")?;
-        let mut queue = queue.try_borrow_mut()?;
-        queue.push_back(message);
-        Ok(())
-    }
 }

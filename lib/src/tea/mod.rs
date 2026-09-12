@@ -1,10 +1,10 @@
 mod app;
+mod capabilities;
 mod effect;
-mod input;
 mod model;
-mod platform;
+mod queue;
 
 pub use app::*;
+pub use capabilities::*;
 pub use effect::*;
-pub use input::*;
 pub use model::*;

@@ -1,14 +1,20 @@
-use super::{effect, input, model};
+use crate::tea::Capabilities;
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use super::{capabilities, effect, model, queue};
+
+use std::rc::Rc;
 
 pub struct App<Model, Message> {
     model: Model,
-    queue: Rc<RefCell<VecDeque<Message>>>,
-    dispatch: effect::Dispatch<Message>,
+    queue: Rc<queue::Queue<Message>>,
+    capabilities: capabilities::Capabilities<Message>,
 }
 
-impl<Model, Message> App<Model, Message>
+pub struct AppSettings {
+    spawner: Rc<dyn capabilities::Spawner>,
+}
+
+impl<Model, Message: 'static> App<Model, Message>
 where
     Model: model::Model<Message>,
 {
@@ -16,18 +22,18 @@ where
         &self.model
     }
 
-    pub fn input(&self) -> input::Input<Message> {
-        input::Input::new(self.dispatch.clone())
+    pub fn capabilities(&self) -> &Capabilities<Message> {
+        &self.capabilities
     }
 
-    pub fn new() -> Self {
+    pub fn new(settings: AppSettings) -> Self {
         let (model, effects_init) = Model::init();
-        let queue = Rc::new(RefCell::new(VecDeque::<Message>::new()));
-        let dispatch = effect::Dispatch::new(&queue);
+        let queue = Rc::new(queue::Queue::new());
+        let capabilities = capabilities::Capabilities::new(queue.clone(), settings.spawner);
         let a_self = Self {
             model,
             queue,
-            dispatch,
+            capabilities,
         };
 
         a_self.start_effects(effects_init);
@@ -51,13 +57,12 @@ where
     }
 
     fn drain_once(&mut self) -> Option<Message> {
-        let mut queue = self.queue.try_borrow_mut().ok()?;
-        queue.pop_front()
+        self.queue.pop()
     }
 
     fn start_effects(&self, effects_batch: effect::Effects<Message>) {
         for effect in effects_batch {
-            (effect)(self.dispatch.clone());
+            (effect)(&self.capabilities);
         }
     }
 }
