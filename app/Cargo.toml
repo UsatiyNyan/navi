@@ -7,8 +7,9 @@ edition = "2024"
 lib = { path = "../lib" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.53.1", features = ["rt"] }
+tokio = { version = "1.53.1", features = ["rt", "macros"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.78"
+

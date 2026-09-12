@@ -11,7 +11,7 @@ pub struct App<Model, Message> {
 }
 
 pub struct AppSettings {
-    spawner: Rc<dyn capabilities::Spawner>,
+    pub spawner: Rc<dyn capabilities::Spawner>,
 }
 
 impl<Model, Message: 'static> App<Model, Message>
