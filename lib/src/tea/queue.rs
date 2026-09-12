@@ -8,10 +8,7 @@ pub(crate) struct Queue<Message> {
 
 impl<Message> Queue<Message> {
     pub(crate) fn pop(&self) -> Option<Message> {
-        self.inner
-            .try_borrow_mut()
-            .ok()
-            .and_then(|mut q| q.pop_back())
+        self.inner.borrow_mut().pop_front()
     }
 }
 
