@@ -42,10 +42,10 @@ where
     }
 
     pub fn run_once(&mut self) -> Option<&Model> {
-        let mut effects_batch: effect::Effects<Message> = Default::default();
+        let mut effects_batch = effect::Effects::<Message>::default();
         let mut is_changed = false;
 
-        while let Some(message) = self.drain_once() {
+        while let Some(message) = self.queue.pop() {
             let effects_once = self.model.update(message);
             effects_batch.extend(effects_once);
             is_changed = true;
@@ -54,10 +54,6 @@ where
         self.start_effects(effects_batch);
 
         if is_changed { Some(&self.model) } else { None }
-    }
-
-    fn drain_once(&mut self) -> Option<Message> {
-        self.queue.pop()
     }
 
     fn start_effects(&self, effects_batch: effect::Effects<Message>) {

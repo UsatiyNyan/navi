@@ -50,15 +50,9 @@ async fn main() {
         std::io::stdin().read_line(&mut line).expect("stdin");
 
         match line.trim().to_lowercase().as_str() {
-            "+" => {
-                emitter.emit(Message::Increment);
-            }
-            "-" => {
-                emitter.emit(Message::Decrement);
-            }
-            _ => {
-                break;
-            }
+            "+" => emitter.emit(Message::Increment),
+            "-" => emitter.emit(Message::Decrement),
+            _ => break,
         }
     }
 }
@@ -70,15 +64,5 @@ struct TokioLocalSpawner;
 impl tea::Spawner for TokioLocalSpawner {
     fn spawn(&self, task: tea::Task) {
         tokio::task::spawn_local(task);
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-struct WasmLocalSpawner;
-
-#[cfg(target_arch = "wasm32")]
-impl tea::Spawner for WasmLocalSpawner {
-    fn spawn(&self, task: tea::Task) {
-        wasm_bindgen_futures::spawn_local(task);
     }
 }
