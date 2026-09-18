@@ -1,5 +1,5 @@
-mod lifecycle;
 mod handle;
+mod lifecycle;
 
-use lifecycle::*;
-use handle::*;
+pub use handle::*;
+pub use lifecycle::*;
