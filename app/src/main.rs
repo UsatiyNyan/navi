@@ -1,58 +1,32 @@
+mod conductor;
+mod app;
+mod platform;
+
+use lib::{render, tea};
 use std::rc::Rc;
-
-use lib::tea;
-
-enum Message {
-    Decrement,
-    Increment,
-}
-
-struct AppState {
-    app: tea::App<Model, Message>,
-}
-
-struct Model {
-    counter: i32,
-}
-
-impl tea::Model<Message> for Model {
-    fn init() -> (Self, tea::Effects<Message>) {
-        (Self { counter: 0 }, Default::default())
-    }
-
-    fn update(&mut self, message: Message) -> tea::Effects<Message> {
-        match message {
-            Message::Decrement => self.counter -= 1,
-            Message::Increment => self.counter += 1,
-        }
-        Default::default()
-    }
-}
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main(flavor = "local")]
 async fn main() {
-    let mut app = tea::App::<Model, Message>::new(tea::AppSettings {
-        spawner: Rc::new(TokioLocalSpawner {}),
+    let spawner = Rc::new(TokioLocalSpawner {});
+    let mut tea_app = tea::App::<Model, Message>::new(tea::AppSettings {
+        spawner: spawner.clone(),
     });
 
-    let emitter = app.capabilities().emitter().upgrade().unwrap();
+    let event_loop = winit::event_loop::EventLoop::with_user_event()
+        .build()
+        .unwrap();
+    let mut render_lifecycle = render::Lifecycle::new(render::LifecycleOptions {
+        event_loop_proxy: event_loop.create_proxy(),
+        spawner,
+    });
 
     loop {
         // runs effects
         tokio::task::yield_now().await;
 
-        if let Some(model) = app.run_once() {
-            println!("counter={}", model.counter);
-        }
-
-        let mut line = String::new();
-        std::io::stdin().read_line(&mut line).expect("stdin");
-
-        match line.trim().to_lowercase().as_str() {
-            "+" => emitter.emit(Message::Increment),
-            "-" => emitter.emit(Message::Decrement),
-            _ => break,
+        if let Some(model) = tea_app.run_once() {
+            render_lifecycle.request_redraw();
         }
     }
 }
