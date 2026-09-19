@@ -1,5 +1,6 @@
-use lib::{render, tea};
+use lib::{buffer, render, tea};
 
+#[derive(Debug)]
 pub(crate) enum Message {}
 
 pub(crate) struct Model {}

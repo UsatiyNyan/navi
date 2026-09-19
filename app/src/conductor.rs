@@ -1,7 +1,9 @@
 use super::app;
 use lib::{buffer, render, tea};
+use std::rc::Rc;
 use winit::{application as wa, event as we, event_loop as wel, window as ww};
 
+#[derive(Debug)]
 pub(crate) enum ConductorMessage {
     RenderInitialized(anyhow::Result<render::Handle>),
     Message(app::Message),
@@ -73,7 +75,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
             we::WindowEvent::Resized(size) => self.render.resize(size),
             we::WindowEvent::RedrawRequested => {
                 let gpu_handle = self.render.gpu_handle().expect("TODO: invariant");
-                app::render(self.tea.model(), gpu_handle, self.buffer)
+                app::render(self.tea.model(), gpu_handle, &mut self.buffer)
             }
             _ => {}
         }
