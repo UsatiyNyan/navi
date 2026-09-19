@@ -18,7 +18,9 @@ path = "src/main.rs"
 required-features = ["native-cli"]
 
 [dependencies]
+anyhow = "1.0.104"
 lib = { path = "../lib" }
+winit = { version = "0.30", features = [] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.53.1", features = ["rt", "macros"], optional = true }
