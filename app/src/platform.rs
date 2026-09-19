@@ -1,4 +1,5 @@
-use crate::tea;
+use crate::{app, conductor, tea};
+use winit::event_loop as wel;
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) struct WasmLocalSpawner;
@@ -32,4 +33,30 @@ impl tea::Spawner for TokioSpawner {
     fn spawn(&self, task: tea::Task) {
         self.runtime.spawn(task);
     }
+}
+
+pub(crate) struct WinitEmitter {
+    event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
+}
+
+impl tea::Emitter<app::Message> for WinitEmitter {
+    fn emit(&self, message: app::Message) {
+        let _ = self
+            .event_loop_proxy
+            .send_event(conductor::ConductorMessage::Message(message));
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn create_emitter(
+    event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
+) -> tea::EmitterPtr<app::Message> {
+    std::rc::Rc::new(WinitEmitter { event_loop_proxy })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn create_emitter(
+    event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
+) -> tea::EmitterPtr<app::Message> {
+    std::sync::Arc::new(WinitEmitter { event_loop_proxy })
 }

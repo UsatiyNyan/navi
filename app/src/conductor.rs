@@ -4,8 +4,7 @@ use winit::{application as wa, event as we, event_loop as wel, window as ww};
 
 pub(crate) enum ConductorMessage {
     RenderInitialized(anyhow::Result<render::Handle>),
-    MessageAvailable,
-    DeviceLost, // TODO
+    Message(app::Message),
 }
 
 pub(crate) struct Conductor {
@@ -17,22 +16,21 @@ pub(crate) struct Conductor {
 }
 
 pub(crate) struct ConductorSettings {
-    pub spawner: Rc<dyn tea::Spawner>,
+    pub app: tea::AppSettings<app::Message>,
     pub event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
 }
 
 impl Conductor {
     pub(crate) fn new(settings: ConductorSettings) -> Self {
-        let tea = tea::App::new(tea::AppSettings {
-            spawner: settings.spawner.clone(),
-        });
+        let spawner = settings.app.spawner.clone();
+        let tea = tea::App::new(settings.app);
         let render = render::Lifecycle::new();
         let buffer = buffer::State {};
         Self {
             tea,
             render,
             buffer,
-            spawner: settings.spawner,
+            spawner,
             event_loop_proxy: settings.event_loop_proxy,
         }
     }
@@ -43,10 +41,10 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
         let lifecycle_action = self.render.resume(event_loop);
         match lifecycle_action {
             Some(render::LifecycleEffect::Initialize(future)) => {
+                let event_loop_proxy = self.event_loop_proxy.clone();
                 self.spawner.spawn(Box::pin(async move {
-                    self.event_loop_proxy
-                        .send_event(ConductorMessage::RenderInitialized(future.await))
-                        .expect("send_event failed");
+                    let _ = event_loop_proxy
+                        .send_event(ConductorMessage::RenderInitialized(future.await));
                 }));
             }
             None => {}
@@ -57,11 +55,10 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
         self.render.suspend(event_loop);
     }
 
-    fn user_event(&mut self, event_loop: &wel::ActiveEventLoop, event: ConductorMessage) {
+    fn user_event(&mut self, _event_loop: &wel::ActiveEventLoop, event: ConductorMessage) {
         match event {
             ConductorMessage::RenderInitialized(handle) => self.render.initialize(handle),
-            ConductorMessage::MessageAvailable => todo!(),
-            ConductorMessage::DeviceLost => todo!(),
+            ConductorMessage::Message(message) => self.tea.enqueue(message),
         }
     }
 
@@ -79,6 +76,12 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                 app::render(self.tea.model(), gpu_handle, self.buffer)
             }
             _ => {}
+        }
+    }
+
+    fn about_to_wait(&mut self, event_loop: &wel::ActiveEventLoop) {
+        if self.tea.run_once().is_some() {
+            self.render.request_redraw();
         }
     }
 }

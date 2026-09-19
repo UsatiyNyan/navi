@@ -10,8 +10,9 @@ pub struct App<Model, Message> {
     capabilities: capabilities::Capabilities<Message>,
 }
 
-pub struct AppSettings {
+pub struct AppSettings<Message> {
     pub spawner: Rc<dyn capabilities::Spawner>,
+    pub emitter: capabilities::EmitterPtr<Message>,
 }
 
 impl<Model, Message: 'static> App<Model, Message>
@@ -26,10 +27,14 @@ where
         &self.capabilities
     }
 
-    pub fn new(settings: AppSettings) -> Self {
+    pub fn enqueue(&self, message: Message) {
+        self.queue.push(message);
+    }
+
+    pub fn new(settings: AppSettings<Message>) -> Self {
         let (model, effects_init) = Model::init();
         let queue = Rc::new(queue::Queue::new());
-        let capabilities = capabilities::Capabilities::new(queue.clone(), settings.spawner);
+        let capabilities = capabilities::Capabilities::new(settings.emitter, settings.spawner);
         let a_self = Self {
             model,
             queue,

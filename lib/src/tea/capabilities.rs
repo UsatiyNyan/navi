@@ -1,11 +1,19 @@
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::{self, Arc};
 use std::{
     pin::Pin,
-    rc::{Rc, Weak},
+    rc::{self, Rc},
 };
 
 pub trait Emitter<Message> {
     fn emit(&self, message: Message);
 }
+
+#[cfg(target_arch = "wasm32")]
+pub type EmitterPtr<Message> = Rc<dyn Emitter<Message>>;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub type EmitterPtr<Message> = Arc<dyn Emitter<Message> + Send + Sync>;
 
 #[cfg(target_arch = "wasm32")]
 pub type Task = Pin<Box<dyn Future<Output = ()> + 'static>>;
@@ -19,20 +27,26 @@ pub trait Spawner {
 
 #[derive(Clone)]
 pub struct Capabilities<Message> {
-    emitter: Rc<dyn Emitter<Message>>,
+    emitter: EmitterPtr<Message>,
     spawner: Rc<dyn Spawner>,
 }
 
 impl<Message> Capabilities<Message> {
-    pub fn new(emitter: Rc<dyn Emitter<Message>>, spawner: Rc<dyn Spawner>) -> Self {
+    pub fn new(emitter: EmitterPtr<Message>, spawner: Rc<dyn Spawner>) -> Self {
         Self { emitter, spawner }
     }
 
-    pub fn emitter(&self) -> Weak<dyn Emitter<Message> + 'static> {
+    #[cfg(target_arch = "wasm32")]
+    pub fn emitter(&self) -> rc::Weak<dyn Emitter<Message> + 'static> {
         Rc::downgrade(&self.emitter)
     }
 
-    pub fn spawner(&self) -> Weak<dyn Spawner + 'static> {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn emitter(&self) -> sync::Weak<dyn Emitter<Message> + Send + Sync + 'static> {
+        Arc::downgrade(&self.emitter)
+    }
+
+    pub fn spawner(&self) -> rc::Weak<dyn Spawner + 'static> {
         Rc::downgrade(&self.spawner)
     }
 

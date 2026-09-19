@@ -24,13 +24,15 @@ fn main() {
     let event_loop_proxy = event_loop.create_proxy();
 
     #[cfg(not(target_arch = "wasm32"))]
-    let spawner = Box::new(platform::TokioSpawner::new());
+    let spawner = Rc::new(platform::TokioSpawner::new());
 
     #[cfg(target_arch = "wasm32")]
-    let spawner = Box::new(platform::WasmLocalSpawner {});
+    let spawner = Rc::new(platform::WasmLocalSpawner {});
+
+    let emitter = platform::create_emitter(event_loop_proxy.clone());
 
     let mut conductor = conductor::Conductor::new(conductor::ConductorSettings {
-        spawner,
+        app: tea::AppSettings { spawner, emitter },
         event_loop_proxy,
     });
 
