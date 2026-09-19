@@ -19,8 +19,15 @@ pub struct Lifecycle {
     gpu_state: GpuState,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+type InitializationFuture =
+    Pin<Box<dyn Future<Output = anyhow::Result<handle::Handle>> + Send + 'static>>;
+
+#[cfg(target_arch = "wasm32")]
+type InitializationFuture = Pin<Box<dyn Future<Output = anyhow::Result<handle::Handle>> + 'static>>;
+
 pub enum LifecycleEffect {
-    Initialize(Pin<Box<dyn Future<Output = anyhow::Result<handle::Handle>> + Send + 'static>>),
+    Initialize(InitializationFuture),
 }
 
 impl Lifecycle {
@@ -39,10 +46,9 @@ impl Lifecycle {
     }
 
     pub fn resume(&mut self, event_loop: &wel::ActiveEventLoop) -> Option<LifecycleEffect> {
-        let host_state = std::mem::replace(&mut self.host_state, HostState::Suspended);
-        let gpu_state = std::mem::replace(&mut self.gpu_state, GpuState::NotStarted);
-        match (host_state, gpu_state) {
+        match (&self.host_state, &self.gpu_state) {
             (HostState::Suspended, GpuState::NotStarted) => {
+                self.host_state = HostState::Resumed;
                 self.gpu_state = GpuState::Initializing;
 
                 #[cfg(target_arch = "wasm32")]
@@ -59,7 +65,7 @@ impl Lifecycle {
                     window,
                 ))))
             }
-            (HostState::Suspended, GpuState::Initializing | GpuState::Ready) => {
+            (HostState::Suspended, GpuState::Initializing | GpuState::Ready(_)) => {
                 self.host_state = HostState::Resumed;
                 None
             }
@@ -77,7 +83,6 @@ impl Lifecycle {
         match gpu_state {
             GpuState::Initializing => match handle {
                 Ok(mut handle) => {
-                    self.host_state = HostState::Resumed;
                     handle.configure();
                     handle.request_redraw();
                     self.gpu_state = GpuState::Ready(handle);
