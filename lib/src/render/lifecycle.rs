@@ -10,18 +10,17 @@ pub enum HostState {
 pub enum GpuState {
     NotStarted,
     Initializing,
-    Ready,
+    Ready(handle::Handle),
     Failed,
 }
 
 pub struct Lifecycle {
     host_state: HostState,
     gpu_state: GpuState,
-    gpu_handle: Option<handle::Handle>,
 }
 
 pub enum LifecycleEffect {
-    Initialize(Pin<Box<dyn Future<Output = anyhow::Result<handle::Handle>> + 'static>>),
+    Initialize(Pin<Box<dyn Future<Output = anyhow::Result<handle::Handle>> + Send + 'static>>),
 }
 
 impl Lifecycle {
@@ -29,12 +28,14 @@ impl Lifecycle {
         Self {
             host_state: HostState::Suspended,
             gpu_state: GpuState::NotStarted,
-            gpu_handle: None,
         }
     }
 
     pub fn gpu_handle(&mut self) -> Option<&mut handle::Handle> {
-        self.gpu_handle.as_mut()
+        match &mut self.gpu_state {
+            GpuState::Ready(handle) => Some(handle),
+            _ => None,
+        }
     }
 
     pub fn resume(&mut self, event_loop: &wel::ActiveEventLoop) -> Option<LifecycleEffect> {
@@ -75,12 +76,11 @@ impl Lifecycle {
         let gpu_state = std::mem::replace(&mut self.gpu_state, GpuState::NotStarted);
         match gpu_state {
             GpuState::Initializing => match handle {
-                Ok(handle) => {
+                Ok(mut handle) => {
                     self.host_state = HostState::Resumed;
-                    self.gpu_handle = Some(handle);
-                    let handle = self.gpu_handle.as_mut().unwrap();
                     handle.configure();
                     handle.request_redraw();
+                    self.gpu_state = GpuState::Ready(handle);
                 }
                 Err(_) => {
                     self.gpu_state = GpuState::Failed;
@@ -90,9 +90,15 @@ impl Lifecycle {
         }
     }
 
+    pub fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+        if let GpuState::Ready(handle) = &mut self.gpu_state {
+            handle.resize(size.width, size.height);
+        }
+    }
+
     pub fn request_redraw(&self) {
-        self.gpu_handle
-            .as_ref()
-            .map(|handle| handle.request_redraw());
+        if let GpuState::Ready(handle) = &self.gpu_state {
+            handle.request_redraw();
+        }
     }
 }
