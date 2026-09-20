@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+log = "0.4.33"
 proto = { path = "../proto" }
 winit = { version = "0.30", features = [] }
 

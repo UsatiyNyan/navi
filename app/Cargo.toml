@@ -20,12 +20,16 @@ required-features = ["native-cli"]
 [dependencies]
 anyhow = "1.0.104"
 lib = { path = "../lib" }
+log = "0.4.33"
 winit = { version = "0.30", features = [] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11.11"
 tokio = { version = "1.53.1", features = ["rt-multi-thread"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1.0"
 wasm-bindgen = "0.2.105"
 wasm-bindgen-futures = "0.4.78"
 web-sys = { version = "0.3.105", features = ["HtmlCanvasElement"] }

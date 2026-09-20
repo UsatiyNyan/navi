@@ -8,8 +8,8 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn start(canvas: web_sys::HtmlCanvasElement) {
-    // TODO: console_log::init_with_level(log::Level::Info).unwrap_throw();
-    // console_error_panic_hook::set_once();
+    console_log::init_with_level(log::Level::Info).unwrap_throw();
+    console_error_panic_hook::set_once();
 
     let event_loop = winit::event_loop::EventLoop::with_user_event()
         .build()

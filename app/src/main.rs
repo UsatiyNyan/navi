@@ -4,7 +4,7 @@ mod platform;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    // TODO: env_logger::init();
+    env_logger::init();
 
     let event_loop = winit::event_loop::EventLoop::with_user_event()
         .build()
