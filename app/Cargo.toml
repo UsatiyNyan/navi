@@ -19,6 +19,7 @@ required-features = ["native-cli"]
 
 [dependencies]
 anyhow = "1.0.104"
+jiff = "0.2.37"
 lib = { path = "../lib" }
 log = "0.4.33"
 winit = { version = "0.30", features = [] }
