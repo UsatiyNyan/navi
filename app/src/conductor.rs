@@ -75,8 +75,9 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
             we::WindowEvent::CloseRequested => event_loop.exit(),
             we::WindowEvent::Resized(size) => self.render.resize(size),
             we::WindowEvent::RedrawRequested => {
-                let gpu_handle = self.render.gpu_handle().expect("TODO: invariant");
-                app::render(self.tea.model(), gpu_handle, &mut self.buffer)
+                if let Some(gpu_handle) = self.render.gpu_handle() {
+                    app::render(self.tea.model(), gpu_handle, &mut self.buffer)
+                }
             }
             _ => {}
         }

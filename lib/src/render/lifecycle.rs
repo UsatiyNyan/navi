@@ -67,7 +67,14 @@ impl Lifecycle {
     }
 
     pub fn suspend(&mut self, event_loop: &wel::ActiveEventLoop) {
-        todo!();
+        let _ = event_loop;
+
+        match &self.host_state {
+            HostState::Resumed => {
+                self.host_state = HostState::Suspended;
+            }
+            HostState::Suspended => {}
+        }
     }
 
     pub fn initialize(&mut self, handle: anyhow::Result<handle::Handle>) {
