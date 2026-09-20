@@ -8,7 +8,7 @@ pub enum HostState {
 }
 
 pub enum GpuState {
-    NotStarted,
+    NotStarted(ww::WindowAttributes),
     Initializing,
     Ready(handle::Handle),
     Failed,
@@ -31,10 +31,10 @@ pub enum LifecycleEffect {
 }
 
 impl Lifecycle {
-    pub fn new() -> Self {
+    pub fn new(window_attributes: ww::WindowAttributes) -> Self {
         Self {
             host_state: HostState::Suspended,
-            gpu_state: GpuState::NotStarted,
+            gpu_state: GpuState::NotStarted(window_attributes),
         }
     }
 
@@ -47,18 +47,10 @@ impl Lifecycle {
 
     pub fn resume(&mut self, event_loop: &wel::ActiveEventLoop) -> Option<LifecycleEffect> {
         match (&self.host_state, &self.gpu_state) {
-            (HostState::Suspended, GpuState::NotStarted) => {
+            (HostState::Suspended, GpuState::NotStarted(window_attributes)) => {
+                let window_attributes = window_attributes.clone();
                 self.host_state = HostState::Resumed;
                 self.gpu_state = GpuState::Initializing;
-
-                #[cfg(target_arch = "wasm32")]
-                let window_attributes = {
-                    use winit::platform::web::WindowAttributesExtWebSys;
-                    ww::Window::default_attributes().with_canvas(Some(options.canvas))
-                };
-
-                #[cfg(not(target_arch = "wasm32"))]
-                let window_attributes = ww::Window::default_attributes();
 
                 let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
                 Some(LifecycleEffect::Initialize(Box::pin(handle::Handle::new(
@@ -79,8 +71,7 @@ impl Lifecycle {
     }
 
     pub fn initialize(&mut self, handle: anyhow::Result<handle::Handle>) {
-        let gpu_state = std::mem::replace(&mut self.gpu_state, GpuState::NotStarted);
-        match gpu_state {
+        match &self.gpu_state {
             GpuState::Initializing => match handle {
                 Ok(mut handle) => {
                     handle.configure();

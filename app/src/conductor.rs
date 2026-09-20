@@ -20,13 +20,14 @@ pub(crate) struct Conductor {
 pub(crate) struct ConductorSettings {
     pub app: tea::AppSettings<app::Message>,
     pub event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
+    pub window_attributes: ww::WindowAttributes,
 }
 
 impl Conductor {
     pub(crate) fn new(settings: ConductorSettings) -> Self {
         let spawner = settings.app.spawner.clone();
         let tea = tea::App::new(settings.app);
-        let render = render::Lifecycle::new();
+        let render = render::Lifecycle::new(settings.window_attributes);
         let buffer = buffer::State {};
         Self {
             tea,
