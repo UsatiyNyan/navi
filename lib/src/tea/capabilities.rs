@@ -7,7 +7,12 @@ pub trait Emitter<Message> {
     fn emit(&self, message: Message);
 }
 
+#[cfg(target_arch = "wasm32")]
 pub type Task = Pin<Box<dyn Future<Output = ()> + 'static>>;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub type Task = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
+
 pub trait Spawner {
     fn spawn(&self, task: Task);
 }

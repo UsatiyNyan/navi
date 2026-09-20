@@ -1,33 +1,42 @@
-mod conductor;
 mod app;
+mod conductor;
 mod platform;
 
 use lib::{render, tea};
 use std::rc::Rc;
 
-#[cfg(not(target_arch = "wasm32"))]
-#[tokio::main(flavor = "local")]
-async fn main() {
-    let spawner = Rc::new(TokioLocalSpawner {});
-    let mut tea_app = tea::App::<Model, Message>::new(tea::AppSettings {
-        spawner: spawner.clone(),
-    });
+fn main() {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // TODO: env_logger::init();
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        use wasm_bindgen::prelude::*;
+        console_log::init_with_level(log::Level::Info).unwrap_throw();
+        console_error_panic_hook::set_once();
+    }
 
     let event_loop = winit::event_loop::EventLoop::with_user_event()
         .build()
         .unwrap();
-    let mut render_lifecycle = render::Lifecycle::new(render::LifecycleOptions {
-        event_loop_proxy: event_loop.create_proxy(),
+    let event_loop_proxy = event_loop.create_proxy();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let spawner = Box::new(platform::TokioSpawner::new());
+
+    #[cfg(target_arch = "wasm32")]
+    let spawner = Box::new(platform::WasmLocalSpawner {});
+
+    let mut conductor = conductor::Conductor::new(conductor::ConductorSettings {
         spawner,
+        event_loop_proxy,
     });
 
-    loop {
-        // runs effects
-        tokio::task::yield_now().await;
+    #[cfg(not(target_arch = "wasm32"))]
+    event_loop.run_app(&mut conductor).expect("run_app failed");
 
-        if let Some(model) = tea_app.run_once() {
-            render_lifecycle.request_redraw();
-        }
-    }
+    #[cfg(target_arch = "wasm32")]
+    event_loop.spawn_app(conductor);
 }
-

@@ -1,5 +1,7 @@
+use crate::tea;
+
 #[cfg(target_arch = "wasm32")]
-struct WasmLocalSpawner;
+pub(crate) struct WasmLocalSpawner;
 
 #[cfg(target_arch = "wasm32")]
 impl tea::Spawner for WasmLocalSpawner {
@@ -9,11 +11,25 @@ impl tea::Spawner for WasmLocalSpawner {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-struct TokioLocalSpawner;
+pub(crate) struct TokioSpawner {
+    runtime: tokio::runtime::Runtime,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
-impl tea::Spawner for TokioLocalSpawner {
+impl TokioSpawner {
+    pub(crate) fn new() -> Self {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        Self { runtime }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl tea::Spawner for TokioSpawner {
     fn spawn(&self, task: tea::Task) {
-        tokio::task::spawn_local(task);
+        self.runtime.spawn(task);
     }
 }

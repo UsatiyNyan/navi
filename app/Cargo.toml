@@ -23,7 +23,7 @@ lib = { path = "../lib" }
 winit = { version = "0.30", features = [] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.53.1", features = ["rt", "macros"], optional = true }
+tokio = { version = "1.53.1", features = ["rt-multi-thread"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.105"
