@@ -10,12 +10,25 @@ impl tea::Model<Message> for Model {
         (Self {}, Default::default())
     }
 
-    fn update(&mut self, message: Message) -> tea::Effects<Message> {
-        todo!();
+    fn update(&mut self, _message: Message) -> tea::Effects<Message> {
         Default::default()
     }
 }
 
-pub fn render(model: &Model, render_handle: &mut render::Handle, buffer_state: &mut buffer::State) {
-    todo!()
+#[derive(Debug, Clone)]
+pub(crate) struct Record {}
+
+impl buffer::Record<Record> for Record {
+    fn merge(&mut self, _other: Record) {}
+
+    fn combine(&self, _other: &Record) -> Record {
+        _other.clone()
+    }
+}
+
+pub fn render(
+    model: &Model,
+    render_handle: &mut render::Handle,
+    buffer_state: &mut buffer::State<Record>,
+) {
 }

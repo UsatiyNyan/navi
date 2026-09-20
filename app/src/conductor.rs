@@ -12,7 +12,7 @@ pub(crate) enum ConductorMessage {
 pub(crate) struct Conductor {
     tea: tea::App<app::Model, app::Message>,
     render: render::Lifecycle,
-    buffer: buffer::State,
+    buffer: buffer::State<app::Record>,
     spawner: Rc<dyn tea::Spawner>,
     event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
 }
@@ -28,7 +28,9 @@ impl Conductor {
         let spawner = settings.app.spawner.clone();
         let tea = tea::App::new(settings.app);
         let render = render::Lifecycle::new(settings.window_attributes);
-        let buffer = buffer::State {};
+        let buffer = buffer::State::new(buffer::TimelineOptions {
+            window: buffer::Duration::from_secs(120),
+        });
         Self {
             tea,
             render,
@@ -83,7 +85,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &wel::ActiveEventLoop) {
+    fn about_to_wait(&mut self, _event_loop: &wel::ActiveEventLoop) {
         if self.tea.run_once().is_some() {
             self.render.request_redraw();
         }
