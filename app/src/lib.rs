@@ -1,6 +1,7 @@
 mod app;
 mod conductor;
 mod platform;
+mod visualization;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

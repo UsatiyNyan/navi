@@ -1,6 +1,7 @@
 mod app;
 mod conductor;
 mod platform;
+mod visualization;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {

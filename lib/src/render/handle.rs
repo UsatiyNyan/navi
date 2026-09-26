@@ -7,7 +7,18 @@ pub struct Handle {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     window: Arc<winit::window::Window>,
-    // render_pipeline: wgpu::RenderPipeline,
+}
+
+pub struct BeginFrame {
+    pub surface: wgpu::SurfaceTexture,
+    pub view: wgpu::TextureView,
+    pub encoder: wgpu::CommandEncoder,
+}
+
+pub enum BeginFrameError {
+    Skip,
+    Outdated,
+    Lost,
 }
 
 impl Handle {
@@ -73,13 +84,25 @@ impl Handle {
         })
     }
 
-    pub fn configure(&mut self) {
-        let window_size = self.window.inner_size();
-        self.resize(window_size.width, window_size.height);
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
     }
 
     pub fn request_redraw(&self) {
         self.window.request_redraw();
+    }
+
+    pub fn configure(&mut self) {
+        let window_size = self.window.inner_size();
+        self.resize(window_size.width, window_size.height);
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
@@ -88,5 +111,43 @@ impl Handle {
         self.surface.configure(&self.device, &self.config);
     }
 
-    pub fn render(&self) {}
+    pub fn begin_frame(&self) -> std::result::Result<BeginFrame, BeginFrameError> {
+        let surface = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
+            wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => surface_texture,
+            wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Validation => {
+                return Err(BeginFrameError::Skip);
+            }
+            wgpu::CurrentSurfaceTexture::Outdated => {
+                self.surface.configure(&self.device, &self.config);
+                return Err(BeginFrameError::Outdated);
+            }
+            wgpu::CurrentSurfaceTexture::Lost => {
+                return Err(BeginFrameError::Lost);
+            }
+        };
+
+        let view = surface
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        return Ok(BeginFrame {
+            surface,
+            view,
+            encoder,
+        });
+    }
+
+    pub fn end_frame(&self, surface: wgpu::SurfaceTexture, encoder: wgpu::CommandEncoder) {
+        self.queue.submit(std::iter::once(encoder.finish()));
+        self.queue.present(surface);
+    }
 }

@@ -1,4 +1,4 @@
-use super::app;
+use super::{app, visualization};
 use lib::{buffer, render, tea};
 use std::rc::Rc;
 use winit::{application as wa, event as we, event_loop as wel, window as ww};
@@ -15,6 +15,7 @@ pub(crate) struct Conductor {
     buffer: buffer::State<app::Record>,
     spawner: Rc<dyn tea::Spawner>,
     event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
+    visualization: Option<visualization::Visualization>,
 }
 
 pub(crate) struct ConductorSettings {
@@ -37,6 +38,7 @@ impl Conductor {
             buffer,
             spawner,
             event_loop_proxy: settings.event_loop_proxy,
+            visualization: None,
         }
     }
 }
@@ -62,7 +64,12 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
 
     fn user_event(&mut self, _event_loop: &wel::ActiveEventLoop, event: ConductorMessage) {
         match event {
-            ConductorMessage::RenderInitialized(handle) => self.render.initialize(handle),
+            ConductorMessage::RenderInitialized(handle) => {
+                self.render.initialize(handle);
+                if let Some(gpu_handle) = self.render.gpu_handle() {
+                    self.visualization = Some(visualization::Visualization::new(gpu_handle));
+                }
+            }
             ConductorMessage::Message(message) => self.tea.enqueue(message),
         }
     }
@@ -73,12 +80,18 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
         _window_id: ww::WindowId,
         event: we::WindowEvent,
     ) {
+        log::debug!("Conductor::window_event {:?}", event);
+
         match event {
             we::WindowEvent::CloseRequested => event_loop.exit(),
             we::WindowEvent::Resized(size) => self.render.resize(size),
             we::WindowEvent::RedrawRequested => {
-                if let Some(gpu_handle) = self.render.gpu_handle() {
-                    app::render(self.tea.model(), gpu_handle, &mut self.buffer)
+                if let (Some(gpu_handle), Some(visualization)) =
+                    (self.render.gpu_handle(), &self.visualization)
+                {
+                    let _ = visualization
+                        .render(self.tea.model(), gpu_handle, &mut self.buffer)
+                        .map_err(|err| log::error!("{err}"));
                 }
             }
             _ => {}

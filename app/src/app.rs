@@ -25,10 +25,3 @@ impl buffer::Record<Record> for Record {
         _other.clone()
     }
 }
-
-pub fn render(
-    model: &Model,
-    render_handle: &mut render::Handle,
-    buffer_state: &mut buffer::State<Record>,
-) {
-}
