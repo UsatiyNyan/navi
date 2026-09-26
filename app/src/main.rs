@@ -21,6 +21,7 @@ fn main() {
         window_attributes: winit::window::Window::default_attributes(),
     });
 
+    log::debug!("event_loop.run_app");
     event_loop.run_app(&mut conductor).expect("run_app failed");
 }
 

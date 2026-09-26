@@ -45,6 +45,8 @@ impl Conductor {
 
 impl wa::ApplicationHandler<ConductorMessage> for Conductor {
     fn resumed(&mut self, event_loop: &wel::ActiveEventLoop) {
+        log::debug!("Conductor::resumed");
+
         let lifecycle_action = self.render.resume(event_loop);
         match lifecycle_action {
             Some(render::LifecycleEffect::Initialize(future)) => {
@@ -63,6 +65,8 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
     }
 
     fn user_event(&mut self, _event_loop: &wel::ActiveEventLoop, event: ConductorMessage) {
+        log::debug!("Conductor::user_event {:?}", event);
+
         match event {
             ConductorMessage::RenderInitialized(handle) => {
                 self.render.initialize(handle);
