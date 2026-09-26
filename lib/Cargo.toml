@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.104"
-jiff = "0.2.37"
-log = "0.4.33"
-proto = { path = "../proto" }
-winit = { version = "0.30", features = [] }
+anyhow.workspace = true
+jiff.workspace = true
+log.workspace = true
+proto.workspace = true
+winit.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wgpu = { version = "30", default-features = false, features = ["wgsl", "vulkan", "std", "wgpu-core"] }
+wgpu = { workspace = true, features = ["wgsl", "vulkan", "std", "wgpu-core"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wgpu = { version = "30", default-features = false, features = ["wgsl", "webgpu", "std", "web"] }
+wgpu = { workspace = true, features = ["wgsl", "webgpu", "std", "web"] }
