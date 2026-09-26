@@ -24,6 +24,7 @@ lib.workspace = true
 log.workspace = true
 wgpu.workspace = true
 winit.workspace = true
+bytemuck = { version = "1.25.2", features = ["derive"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger.workspace = true
