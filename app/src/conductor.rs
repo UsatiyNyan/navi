@@ -73,6 +73,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                 if let Some(gpu_handle) = self.render.gpu_handle() {
                     self.visualization = Some(visualization::Visualization::new(gpu_handle));
                 }
+                self.render.request_redraw();
             }
             ConductorMessage::Message(message) => self.tea.enqueue(message),
         }
@@ -93,9 +94,17 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                 if let (Some(gpu_handle), Some(visualization)) =
                     (self.render.gpu_handle(), &self.visualization)
                 {
-                    let _ = visualization
-                        .render(self.tea.model(), gpu_handle, &mut self.buffer)
-                        .map_err(|err| log::error!("{err}"));
+                    if let Err(err) =
+                        visualization.render(self.tea.model(), gpu_handle, &mut self.buffer)
+                    {
+                        log::error!("{err}");
+                    }
+                } else {
+                    log::info!(
+                        "Redraw requested when not ready: gpu_handle={} visualization={}",
+                        self.render.gpu_handle().is_none(),
+                        self.visualization.is_none(),
+                    );
                 }
             }
             _ => {}

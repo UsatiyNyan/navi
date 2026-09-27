@@ -17,7 +17,7 @@ pub struct BeginFrame {
 
 pub enum BeginFrameError {
     Skip,
-    Outdated,
+    Retry,
     Lost,
 }
 
@@ -115,14 +115,15 @@ impl Handle {
         let surface = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
             wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => surface_texture,
-            wgpu::CurrentSurfaceTexture::Timeout
-            | wgpu::CurrentSurfaceTexture::Occluded
-            | wgpu::CurrentSurfaceTexture::Validation => {
+            wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Validation => {
+                return Err(BeginFrameError::Retry);
+            }
+            wgpu::CurrentSurfaceTexture::Occluded => {
                 return Err(BeginFrameError::Skip);
             }
             wgpu::CurrentSurfaceTexture::Outdated => {
                 self.surface.configure(&self.device, &self.config);
-                return Err(BeginFrameError::Outdated);
+                return Err(BeginFrameError::Retry);
             }
             wgpu::CurrentSurfaceTexture::Lost => {
                 return Err(BeginFrameError::Lost);

@@ -82,7 +82,6 @@ impl Lifecycle {
             GpuState::Initializing => match handle {
                 Ok(mut handle) => {
                     handle.configure();
-                    handle.request_redraw();
                     self.gpu_state = GpuState::Ready(handle);
                 }
                 Err(_) => {
