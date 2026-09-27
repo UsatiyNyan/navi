@@ -1,3 +1,4 @@
+mod texture;
 mod vertex;
 
 use super::app;
@@ -8,6 +9,8 @@ pub struct Visualization {
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
+
+    depth_texture: texture::Texture,
 }
 
 impl Visualization {
@@ -54,7 +57,13 @@ impl Visualization {
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: texture::DEPTH_FORMAT,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(wgpu::CompareFunction::Less),
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,
@@ -73,20 +82,23 @@ impl Visualization {
         const INDICES: &[u16] = &[0, 1, 2];
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("vertex buffer"),
+            label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(VERTICES),
             usage: wgpu::BufferUsages::VERTEX,
         });
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("index buffer"),
+            label: Some("Index Buffer"),
             contents: bytemuck::cast_slice(INDICES),
             usage: wgpu::BufferUsages::INDEX,
         });
 
+        let depth_texture =
+            texture::Texture::new_depth_texture(&device, handle.config(), "Depth Texture");
         Self {
             render_pipeline,
             vertex_buffer,
             index_buffer,
+            depth_texture,
         }
     }
 
@@ -124,7 +136,14 @@ impl Visualization {
                             store: wgpu::StoreOp::Store,
                         },
                     })],
-                    depth_stencil_attachment: None,
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &self.depth_texture.view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0),
+                            store: wgpu::StoreOp::Store,
+                        }),
+                        stencil_ops: None,
+                    }),
                     occlusion_query_set: None,
                     timestamp_writes: None,
                     multiview_mask: None,
@@ -138,5 +157,11 @@ impl Visualization {
 
         render_handle.end_frame(frame.surface, frame.encoder);
         Ok(())
+    }
+
+    // TODO: this smells
+    pub fn resize(&mut self, handle: &render::Handle) {
+        self.depth_texture =
+            texture::Texture::new_depth_texture(&handle.device(), handle.config(), "Depth Texture");
     }
 }
