@@ -105,13 +105,23 @@ impl Handle {
         self.resize(window_size.width, window_size.height);
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
+    pub fn resize(&mut self, width: u32, height: u32) -> bool {
         self.config.width = width;
         self.config.height = height;
+
+        if width == 0 || height == 0 {
+            return false;
+        }
+
         self.surface.configure(&self.device, &self.config);
+        true
     }
 
     pub fn begin_frame(&self) -> std::result::Result<BeginFrame, BeginFrameError> {
+        if self.config.width == 0 || self.config.height == 0 {
+            return Err(BeginFrameError::Skip);
+        }
+
         let surface = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
             wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => surface_texture,

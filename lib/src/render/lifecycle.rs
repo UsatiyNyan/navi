@@ -92,9 +92,11 @@ impl Lifecycle {
         }
     }
 
-    pub fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+    pub fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>) -> bool {
         if let GpuState::Ready(handle) = &mut self.gpu_state {
-            handle.resize(size.width, size.height);
+            handle.resize(size.width, size.height)
+        } else {
+            false
         }
     }
 

@@ -162,6 +162,6 @@ impl Visualization {
     // TODO: this smells
     pub fn resize(&mut self, handle: &render::Handle) {
         self.depth_texture =
-            texture::Texture::new_depth_texture(&handle.device(), handle.config(), "Depth Texture");
+            texture::Texture::new_depth_texture(handle.device(), handle.config(), "Depth Texture");
     }
 }
