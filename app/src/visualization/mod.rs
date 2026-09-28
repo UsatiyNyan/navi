@@ -1,13 +1,14 @@
+mod instance;
+mod shader;
 mod texture;
 mod vertex;
-mod instance;
 
 use super::app;
 use lib::{buffer, render};
 use wgpu::{self, util::DeviceExt};
 
 pub struct Visualization {
-    render_pipeline: wgpu::RenderPipeline,
+    shader: shader::Unlit,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
 
@@ -17,62 +18,7 @@ pub struct Visualization {
 impl Visualization {
     pub fn new(handle: &render::Handle) -> Self {
         let device = handle.device();
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("./shader/unlit.wgsl").into()),
-        });
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
-                immediate_size: 0,
-            });
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                buffers: &[Some(vertex::Vertex::desc())],
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: handle.config().format,
-                    blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-                polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLIP_CONTROL
-                unclipped_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false,
-            },
-            depth_stencil: Some(wgpu::DepthStencilState {
-                format: texture::DEPTH_FORMAT,
-                depth_write_enabled: Some(true),
-                depth_compare: Some(wgpu::CompareFunction::Less),
-                stencil: wgpu::StencilState::default(),
-                bias: wgpu::DepthBiasState::default(),
-            }),
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            multiview_mask: None,
-            cache: None,
-        });
+        let shader = shader::Unlit::new(device, handle);
 
         #[rustfmt::skip]
         const VERTICES: &[vertex::Vertex] = &[
@@ -95,8 +41,9 @@ impl Visualization {
 
         let depth_texture =
             texture::Texture::new_depth_texture(&device, handle.config(), "Depth Texture");
+
         Self {
-            render_pipeline,
+            shader,
             vertex_buffer,
             index_buffer,
             depth_texture,
@@ -149,7 +96,7 @@ impl Visualization {
                     timestamp_writes: None,
                     multiview_mask: None,
                 });
-            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_pipeline(self.shader.render_pipeline());
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             let indices_count = (self.index_buffer.size() / 2) as u32;
