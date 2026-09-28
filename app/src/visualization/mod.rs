@@ -1,5 +1,6 @@
 mod texture;
 mod vertex;
+mod instance;
 
 use super::app;
 use lib::{buffer, render};
