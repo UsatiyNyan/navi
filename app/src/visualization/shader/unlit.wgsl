@@ -1,10 +1,10 @@
-struct Frame {
+struct TransformFrame {
     rotation: vec4<f32>, // quat
     translation: vec3<f32>,
 };
 
 @group(0) @binding(0)
-var<storage, read> s_frames: array<Frame>;
+var<storage, read> s_transform_frames: array<TransformFrame>;
 
 @group(1) @binding(0)
 var<uniform> u_mvp: mat4x4<f32>;
@@ -71,7 +71,7 @@ fn vs_main(
     vin: VertexInput,
     iin: InstanceInput,
 ) -> VertexOutput {
-    let frame = s_frames[iin.frame];
+    let frame = s_transform_frames[iin.frame];
     let frame_tf = reconstruct_transform(frame.rotation, vec3<f32>(1.0, 1.0, 1.0), frame.translation);
     let instance_tf = reconstruct_transform(iin.rotation, iin.scale, iin.transation);
 
