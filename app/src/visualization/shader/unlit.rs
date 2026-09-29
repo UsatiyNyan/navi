@@ -1,23 +1,55 @@
-use crate::visualization::{instance, vertex, texture};
+use crate::visualization::{instance, texture, vertex};
 use lib::render;
-use wgpu;
+use wgpu::{self, util::DeviceExt};
 
 pub struct Unlit {
     render_pipeline: wgpu::RenderPipeline,
+
+    mvp_buffer: wgpu::Buffer,
+    mvp_bind_group: wgpu::BindGroup,
 }
 
 impl Unlit {
-    pub fn new(device: &wgpu::Device, handle: &render::Handle) -> Self {
+    pub fn new(device: &wgpu::Device, handle: &render::Handle, mvp_init: glam::Mat4) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("unlit.wgsl"),
             source: wgpu::ShaderSource::Wgsl(include_str!("./unlit.wgsl").into()),
         });
+
+        let mvp_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("MVP Buffer"),
+            contents: bytemuck::cast_slice(&[mvp_init]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        let mvp_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("MVP Bind Group Layout"),
+            });
+        let mvp_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &mvp_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: mvp_buffer.as_entire_binding(),
+            }],
+            label: Some("MVP Bind Group"),
+        });
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
                     // TODO: Some(&texture_bind_group_layout),
-                    // TODO: Some(&camera_bind_group_layout),
+                    Some(&mvp_bind_group_layout),
                 ],
                 immediate_size: 0,
             });
@@ -70,10 +102,18 @@ impl Unlit {
             multiview_mask: None,
             cache: None,
         });
-        Self { render_pipeline }
+        Self {
+            render_pipeline,
+            mvp_buffer,
+            mvp_bind_group,
+        }
     }
 
     pub fn render_pipeline(&self) -> &wgpu::RenderPipeline {
         &self.render_pipeline
+    }
+
+    pub fn mvp_bind_group(&self) -> &wgpu::BindGroup {
+        &self.mvp_bind_group
     }
 }

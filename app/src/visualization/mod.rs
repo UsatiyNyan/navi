@@ -1,3 +1,4 @@
+mod camera;
 mod instance;
 mod shader;
 mod texture;
@@ -13,12 +14,26 @@ pub struct Visualization {
     index_buffer: wgpu::Buffer,
 
     depth_texture: texture::Texture,
+
+    camera: camera::Camera,
 }
 
 impl Visualization {
     pub fn new(handle: &render::Handle) -> Self {
         let device = handle.device();
-        let shader = shader::Unlit::new(device, handle);
+        let config = handle.config();
+
+        let camera = camera::Camera {
+            eye: (0.0, 1.0, 2.0).into(),
+            target: (0.0, 0.0, 0.0).into(),
+            up: glam::Vec3::Y,
+            aspect: config.width as f32 / config.height as f32,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        };
+
+        let shader = shader::Unlit::new(device, handle, camera.mvp());
 
         #[rustfmt::skip]
         const VERTICES: &[vertex::Vertex] = &[
@@ -39,14 +54,14 @@ impl Visualization {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        let depth_texture =
-            texture::Texture::new_depth_texture(&device, handle.config(), "Depth Texture");
+        let depth_texture = texture::Texture::new_depth_texture(&device, config, "Depth Texture");
 
         Self {
             shader,
             vertex_buffer,
             index_buffer,
             depth_texture,
+            camera,
         }
     }
 
@@ -97,6 +112,7 @@ impl Visualization {
                     multiview_mask: None,
                 });
             render_pass.set_pipeline(self.shader.render_pipeline());
+            render_pass.set_bind_group(1, self.shader.mvp_bind_group(), &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             let indices_count = (self.index_buffer.size() / 2) as u32;
