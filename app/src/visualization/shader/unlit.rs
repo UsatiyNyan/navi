@@ -1,21 +1,61 @@
-use crate::visualization::{instance, texture, vertex};
+use crate::visualization::{instance, texture, transform_frame, vertex};
 use lib::render;
 use wgpu::{self, util::DeviceExt};
 
 pub struct Unlit {
     render_pipeline: wgpu::RenderPipeline,
 
+    transform_frames_buffer: wgpu::Buffer,
+    transform_frames_bind_group: wgpu::BindGroup,
+
     mvp_buffer: wgpu::Buffer,
     mvp_bind_group: wgpu::BindGroup,
 }
 
 impl Unlit {
-    pub fn new(device: &wgpu::Device, handle: &render::Handle, mvp_init: glam::Mat4) -> Self {
+    pub fn new(
+        device: &wgpu::Device,
+        handle: &render::Handle,
+        transform_frames_init: &[transform_frame::TransformFrame],
+        mvp_init: glam::Mat4,
+    ) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("unlit.wgsl"),
             source: wgpu::ShaderSource::Wgsl(include_str!("./unlit.wgsl").into()),
         });
 
+        // vvv transform_frames
+        let transform_frames_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Transform Frames Buffer"),
+                contents: bytemuck::cast_slice(transform_frames_init),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
+        let transform_frames_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("Transform Frames Bind Group Layout"),
+            });
+        let transform_frames_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &transform_frames_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: transform_frames_buffer.as_entire_binding(),
+            }],
+            label: Some("Transform Frames Bind Group"),
+        });
+        // ^^^ transform_frames
+
+        // vvv mvp
         let mvp_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("MVP Buffer"),
             contents: bytemuck::cast_slice(&[mvp_init]),
@@ -43,12 +83,13 @@ impl Unlit {
             }],
             label: Some("MVP Bind Group"),
         });
+        // ^^^ mvp
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    // TODO: Some(&texture_bind_group_layout),
+                    Some(&transform_frames_bind_group_layout),
                     Some(&mvp_bind_group_layout),
                 ],
                 immediate_size: 0,
@@ -104,6 +145,8 @@ impl Unlit {
         });
         Self {
             render_pipeline,
+            transform_frames_buffer,
+            transform_frames_bind_group,
             mvp_buffer,
             mvp_bind_group,
         }
@@ -111,6 +154,10 @@ impl Unlit {
 
     pub fn render_pipeline(&self) -> &wgpu::RenderPipeline {
         &self.render_pipeline
+    }
+
+    pub fn transform_frames_bind_group(&self) -> &wgpu::BindGroup {
+        &self.transform_frames_bind_group
     }
 
     pub fn mvp_bind_group(&self) -> &wgpu::BindGroup {

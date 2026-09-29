@@ -2,6 +2,7 @@ mod camera;
 mod instance;
 mod shader;
 mod texture;
+mod transform_frame;
 mod vertex;
 
 use super::app;
@@ -15,6 +16,7 @@ pub struct Visualization {
 
     depth_texture: texture::Texture,
 
+    transform_frames: Vec<transform_frame::TransformFrame>,
     camera: camera::Camera,
 }
 
@@ -23,6 +25,11 @@ impl Visualization {
         let device = handle.device();
         let config = handle.config();
 
+        let transform_frames = vec![transform_frame::TransformFrame {
+            rotation: (0.0, 0.0, 0.0, 1.0).into(),
+            translation: (0.0, 0.0, 0.0).into(),
+            padding0: 0,
+        }];
         let camera = camera::Camera {
             eye: (0.0, 1.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
@@ -33,7 +40,7 @@ impl Visualization {
             zfar: 100.0,
         };
 
-        let shader = shader::Unlit::new(device, handle, camera.mvp());
+        let shader = shader::Unlit::new(device, handle, &transform_frames, camera.mvp());
 
         #[rustfmt::skip]
         const VERTICES: &[vertex::Vertex] = &[
@@ -58,9 +65,12 @@ impl Visualization {
 
         Self {
             shader,
+
             vertex_buffer,
             index_buffer,
             depth_texture,
+
+            transform_frames,
             camera,
         }
     }
@@ -112,6 +122,7 @@ impl Visualization {
                     multiview_mask: None,
                 });
             render_pass.set_pipeline(self.shader.render_pipeline());
+            render_pass.set_bind_group(0, self.shader.transform_frames_bind_group(), &[]);
             render_pass.set_bind_group(1, self.shader.mvp_bind_group(), &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);

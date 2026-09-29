@@ -1,6 +1,7 @@
 struct TransformFrame {
     rotation: vec4<f32>, // quat
     translation: vec3<f32>,
+    padding0: u32,
 };
 
 @group(0) @binding(0)
