@@ -24,7 +24,7 @@ impl Instance {
                     shader_location: 4,
                 },
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32,
+                    format: wgpu::VertexFormat::Uint32,
                     offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 5,
                 },

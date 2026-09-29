@@ -13,6 +13,7 @@ pub struct Visualization {
     shader: shader::Unlit,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
+    instance_buffer: wgpu::Buffer,
 
     depth_texture: texture::Texture,
 
@@ -31,7 +32,7 @@ impl Visualization {
             padding0: 0,
         }];
         let camera = camera::Camera {
-            eye: (0.0, 1.0, 2.0).into(),
+            eye: (0.0, 1.0, 20.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: glam::Vec3::Y,
             aspect: config.width as f32 / config.height as f32,
@@ -49,6 +50,12 @@ impl Visualization {
             vertex::Vertex { position: [0.0, 0.5, 0.0], color: [0.0, 1.0, 0.0] },
         ];
         const INDICES: &[u16] = &[0, 1, 2];
+        const INSTANCES: &[instance::Instance] = &[instance::Instance {
+            translation: [0.0, 0.0, 0.0],
+            frame: 0,
+            rotation: [0.0, 0.0, 0.0, 1.0],
+            scale: [1.0, 1.0, 1.0],
+        }];
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
@@ -60,6 +67,11 @@ impl Visualization {
             contents: bytemuck::cast_slice(INDICES),
             usage: wgpu::BufferUsages::INDEX,
         });
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(INSTANCES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
 
         let depth_texture = texture::Texture::new_depth_texture(&device, config, "Depth Texture");
 
@@ -68,6 +80,8 @@ impl Visualization {
 
             vertex_buffer,
             index_buffer,
+            instance_buffer,
+
             depth_texture,
 
             transform_frames,
@@ -125,6 +139,7 @@ impl Visualization {
             render_pass.set_bind_group(0, self.shader.transform_frames_bind_group(), &[]);
             render_pass.set_bind_group(1, self.shader.mvp_bind_group(), &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             let indices_count = (self.index_buffer.size() / 2) as u32;
             render_pass.draw_indexed(0..indices_count, 0, 0..1);
