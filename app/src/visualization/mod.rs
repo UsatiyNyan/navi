@@ -44,10 +44,10 @@ impl Visualization {
         let shader = shader::Unlit::new(device, handle, &transform_frames, camera.mvp());
 
         #[rustfmt::skip]
-        const VERTICES: &[vertex::Vertex] = &[
-            vertex::Vertex { position: [-0.5, -0.5, 0.0], color: [1.0, 0.0, 0.0] },
-            vertex::Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
-            vertex::Vertex { position: [0.0, 0.5, 0.0], color: [0.0, 1.0, 0.0] },
+        const VERTICES: &[vertex::UnlitVertex] = &[
+            vertex::UnlitVertex { position: [-0.5, -0.5, 0.0], color: [1.0, 0.0, 0.0] },
+            vertex::UnlitVertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+            vertex::UnlitVertex { position: [0.0, 0.5, 0.0], color: [0.0, 1.0, 0.0] },
         ];
         const INDICES: &[u16] = &[0, 1, 2];
         const INSTANCES: &[instance::Instance] = &[instance::Instance {

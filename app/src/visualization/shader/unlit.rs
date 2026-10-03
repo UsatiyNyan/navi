@@ -1,4 +1,7 @@
-use crate::visualization::{instance, texture, transform_frame, vertex};
+use crate::visualization::{
+    instance, texture, transform_frame,
+    vertex::{self, Vertex},
+};
 use lib::render;
 use wgpu::{self, util::DeviceExt};
 
@@ -101,7 +104,7 @@ impl Unlit {
                 module: &shader,
                 entry_point: Some("vs_main"),
                 buffers: &[
-                    Some(vertex::Vertex::desc()),
+                    Some(vertex::UnlitVertex::desc()),
                     Some(instance::Instance::desc()),
                 ],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
