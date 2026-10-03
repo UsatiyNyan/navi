@@ -37,7 +37,7 @@ impl Visualization {
             padding0: 0,
         }];
         let camera = camera::Camera {
-            eye: (0.0, 1.0, 20.0).into(),
+            eye: (1.0, 1.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: glam::Vec3::Y,
             aspect: config.width as f32 / config.height as f32,
@@ -49,12 +49,52 @@ impl Visualization {
         let shader = shader::Unlit::new(device, handle, &transform_frames, camera.mvp());
 
         #[rustfmt::skip]
-        const VERTICES: &[vertex::UnlitVertex] = &[
-            vertex::UnlitVertex { position: [-0.5, -0.5, 0.0], color: [1.0, 0.0, 0.0] },
-            vertex::UnlitVertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
-            vertex::UnlitVertex { position: [0.0, 0.5, 0.0], color: [0.0, 1.0, 0.0] },
+        const VERTICES: &[vertex::UnlitVertex] = 
+        {
+            let r = [1.0, 0.0, 0.0];
+            let g = [0.0, 1.0, 0.0];
+            let b = [0.0, 0.0, 1.0];
+            type V = vertex::UnlitVertex;
+            &[
+                V{ position: [ 0.5, 0.5, 0.5, ], color: r}, // top right
+                V{ position: [ 0.5, -0.5, 0.5, ], color: g }, // bottom right
+                V{ position: [ -0.5, -0.5, 0.5, ], color: r }, // bottom left
+                V{ position: [ -0.5, 0.5, 0.5, ], color: b }, // top left
+                // right face
+                V{ position: [ 0.5, 0.5, 0.5, ], color: g }, // top right
+                V{ position: [ 0.5, -0.5, 0.5, ], color: r }, // bottom right
+                V{ position: [ 0.5, -0.5, -0.5, ], color: g }, // bottom left
+                V{ position: [ 0.5, 0.5, -0.5, ], color: b }, // top left
+                // back face
+                V{ position: [ 0.5, 0.5, -0.5, ], color: b }, // top right
+                V{ position: [ 0.5, -0.5, -0.5, ], color: g }, // bottom right
+                V{ position: [ -0.5, -0.5, -0.5, ], color: b }, // bottom left
+                V{ position: [ -0.5, 0.5, -0.5, ], color: r }, // top left
+                // left face
+                V{ position: [ -0.5, 0.5, -0.5, ], color: r }, // top right
+                V{ position: [ -0.5, -0.5, -0.5, ], color: g }, // bottom right
+                V{ position: [ -0.5, -0.5, 0.5, ], color: r }, // bottom left
+                V{ position: [ -0.5, 0.5, 0.5, ], color: b }, // top left
+                // top face
+                V{ position: [ 0.5, 0.5, 0.5, ], color: g }, // top right
+                V{ position: [ 0.5, 0.5, -0.5, ], color: r }, // bottom right
+                V{ position: [ -0.5, 0.5, -0.5, ], color: g }, // bottom left
+                V{ position: [ -0.5, 0.5, 0.5, ], color: b }, // top left
+                // bottom face
+                V{ position: [ 0.5, -0.5, 0.5, ], color: b }, // top right
+                V{ position: [ 0.5, -0.5, -0.5, ], color: g }, // bottom right
+                V{ position: [ -0.5, -0.5, -0.5, ], color: b }, // bottom left
+                V{ position: [ -0.5, -0.5, 0.5, ], color: r }, // top left
+            ]
+        };
+        const INDICES: &[u32] = &[
+            3,  1,  0,   3,  2,  1, // front face
+            4,  5,  7,   5,  6,  7, // right face
+            8,  9, 11,   9, 10, 11, // back face
+            12, 13, 15,  13, 14, 15, // left face
+            16, 17, 19,  17, 18, 19, // top face
+            23, 21, 20,  23, 22, 21, // bottom face
         ];
-        const INDICES: &[u32] = &[0, 1, 2];
         const INSTANCES: &[instance::Instance] = &[instance::Instance {
             translation: [0.0, 0.0, 0.0],
             frame: 0,
