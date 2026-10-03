@@ -94,6 +94,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                     // TODO: this smells
                     if let Some(visualization) = &mut self.visualization {
                         visualization.resize(self.render.gpu_handle().unwrap());
+                        self.render.request_redraw();
                     }
                 }
             }
