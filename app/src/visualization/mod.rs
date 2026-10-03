@@ -10,6 +10,7 @@ use super::app;
 use lib::{buffer, render};
 use mesh::DrawMesh;
 use wgpu::{self, util::DeviceExt};
+use shader::UseShader;
 
 struct Scene {
     mesh: mesh::Mesh,
@@ -109,7 +110,7 @@ impl Visualization {
         });
 
         let scene = Scene {
-            mesh: mesh::Mesh::new(device, "cube".into(), VERTICES, &INDICES),
+            mesh: mesh::Mesh::new(device, "cube".into(), VERTICES, INDICES),
             instance_buffer,
         };
 
@@ -170,9 +171,7 @@ impl Visualization {
                     timestamp_writes: None,
                     multiview_mask: None,
                 });
-            render_pass.set_pipeline(self.shader.render_pipeline());
-            render_pass.set_bind_group(0, self.shader.transform_frames_bind_group(), &[]);
-            render_pass.set_bind_group(1, self.shader.mvp_bind_group(), &[]);
+            render_pass.set_shader(&self.shader);
             render_pass.set_vertex_buffer(1, self.scene.instance_buffer.slice(..));
             render_pass.draw_mesh_instanced(&self.scene.mesh, 0..1);
         }

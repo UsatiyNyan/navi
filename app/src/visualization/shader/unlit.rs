@@ -1,3 +1,4 @@
+use super::ext::Shader;
 use crate::visualization::{
     instance, texture, transform_frame,
     vertex::{self, Vertex},
@@ -154,16 +155,15 @@ impl Unlit {
             mvp_bind_group,
         }
     }
+}
 
-    pub fn render_pipeline(&self) -> &wgpu::RenderPipeline {
+impl Shader for Unlit {
+    fn render_pipeline(&self) -> &wgpu::RenderPipeline {
         &self.render_pipeline
     }
 
-    pub fn transform_frames_bind_group(&self) -> &wgpu::BindGroup {
-        &self.transform_frames_bind_group
-    }
-
-    pub fn mvp_bind_group(&self) -> &wgpu::BindGroup {
-        &self.mvp_bind_group
+    fn bind_groups(&self, render_pass: &mut wgpu::RenderPass) {
+        render_pass.set_bind_group(0, &self.transform_frames_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.mvp_bind_group, &[]);
     }
 }
