@@ -155,6 +155,10 @@ impl Unlit {
             mvp_bind_group,
         }
     }
+
+    pub fn set_mvp(&mut self, queue: &wgpu::Queue, mvp: glam::Mat4) {
+        queue.write_buffer(&self.mvp_buffer, 0, bytemuck::cast_slice(&[mvp]));
+    }
 }
 
 impl Shader for Unlit {

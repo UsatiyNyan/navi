@@ -41,7 +41,7 @@ impl Visualization {
             eye: (1.0, 1.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: glam::Vec3::Y,
-            aspect: config.width as f32 / config.height as f32,
+            aspect: aspect_from_config(config),
             fovy: 45.0,
             znear: 0.1,
             zfar: 100.0,
@@ -184,5 +184,11 @@ impl Visualization {
     pub fn resize(&mut self, handle: &render::Handle) {
         self.depth_texture =
             texture::Texture::new_depth_texture(handle.device(), handle.config(), "Depth Texture");
+        self.camera.aspect = aspect_from_config(handle.config());
+        self.shader.set_mvp(handle.queue(), self.camera.mvp());
     }
+}
+
+fn aspect_from_config(config: &wgpu::SurfaceConfiguration) -> f32 {
+    config.width as f32 / config.height as f32
 }
