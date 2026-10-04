@@ -2,7 +2,7 @@ use super::record::{Record, RecordNode};
 pub use jiff::{SignedDuration as Duration, Timestamp};
 use std::collections::{BTreeMap, btree_map::Entry};
 
-pub struct Timeline<T: Record<T> + Clone> {
+pub struct Timeline<T: Record> {
     tree: BTreeMap<Timestamp, RecordNode<T>>,
     window: Duration,
 }
@@ -12,7 +12,7 @@ pub struct TimelineOptions {
     pub window: Duration,
 }
 
-impl<T: Record<T> + Clone> Timeline<T> {
+impl<T: Record> Timeline<T> {
     pub const fn new(options: TimelineOptions) -> Self {
         Self {
             tree: BTreeMap::new(),

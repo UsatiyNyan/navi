@@ -1,6 +1,10 @@
-pub trait Record<T: Clone> {
-    fn merge(&mut self, other: T);
-    fn combine(&self, other: &T) -> T;
+pub trait Record: Clone {
+    fn merge(&mut self, other: Self) {
+        let _ = std::mem::replace(self, other);
+    }
+    fn combine(&self, other: &Self) -> Self {
+        other.clone()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,12 +29,12 @@ impl RecordType {
 }
 
 #[derive(Debug, Clone)]
-pub struct RecordNode<T: Record<T> + Clone> {
+pub struct RecordNode<T: Record> {
     pub record_value: T,
     pub record_type: RecordType,
 }
 
-impl<T: Record<T> + Clone> RecordNode<T> {
+impl<T: Record> RecordNode<T> {
     pub fn new(record_value: T, record_type: RecordType) -> Self {
         Self {
             record_value,

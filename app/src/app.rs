@@ -18,7 +18,7 @@ impl tea::Model<Message> for Model {
 #[derive(Debug, Clone)]
 pub(crate) struct Record {}
 
-impl buffer::Record<Record> for Record {
+impl buffer::Record for Record {
     fn merge(&mut self, _other: Record) {}
 
     fn combine(&self, _other: &Record) -> Record {
