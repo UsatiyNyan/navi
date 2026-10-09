@@ -21,12 +21,31 @@ impl<T: Record> Timeline<T> {
     }
 
     pub fn query(&self, ts: Timestamp) -> Option<T> {
+        self.query_with(ts, |_| true, |v| v.record_type.is_snapshot())
+    }
+
+    pub fn query_with<P1, P2>(
+        &self,
+        ts: Timestamp,
+        precondition: P1,
+        postcondition: P2,
+    ) -> Option<T>
+    where
+        P1: Fn(&RecordNode<T>) -> bool,
+        P2: Fn(&RecordNode<T>) -> bool,
+    {
         let mut acc: Option<RecordNode<T>> = None;
         for (_, v) in self.tree.range(..=ts).rev() {
+            if !precondition(v) {
+                break;
+            }
             acc = Some(match acc {
                 Some(record) => record.combine(v),
                 None => v.clone(),
             });
+            if !postcondition(v) {
+                break;
+            }
         }
         acc.map(|x| x.record_value)
     }
