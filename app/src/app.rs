@@ -5,6 +5,8 @@ pub(crate) enum Message {}
 
 pub(crate) struct Model {}
 
+pub(crate) struct RecordState {}
+
 impl tea::Model<Message> for Model {
     fn init() -> (Self, tea::Effects<Message>) {
         (Self {}, Default::default())

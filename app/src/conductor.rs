@@ -12,7 +12,7 @@ pub(crate) enum ConductorMessage {
 pub(crate) struct Conductor {
     tea: tea::App<app::Model, app::Message>,
     render: render::Lifecycle,
-    buffer: buffer::State<app::Record>,
+    buffer: buffer::State<'static, app::RecordState>,
     spawner: Rc<dyn tea::Spawner>,
     event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
     visualization: Option<visualization::Visualization>,

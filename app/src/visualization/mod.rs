@@ -129,7 +129,7 @@ impl Visualization {
         &self,
         model: &app::Model,
         render_handle: &mut render::Handle,
-        buffer_state: &mut buffer::State<app::Record>,
+        buffer_state: &mut buffer::State<app::RecordState>,
     ) -> anyhow::Result<()> {
         let mut frame = match render_handle.begin_frame() {
             Ok(frame) => frame,
