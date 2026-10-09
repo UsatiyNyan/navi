@@ -2,31 +2,33 @@ use std::collections::HashMap;
 
 use super::record;
 use super::timeline;
+use super::topic;
 
-pub struct State<T: record::Record> {
-    topics: HashMap<String, timeline::Timeline<T>>,
-    options: timeline::TimelineOptions,
+pub struct State<'a> {
+    topics: HashMap<String, Box<dyn topic::Topic + 'a>>,
+    timeline_options: timeline::TimelineOptions,
 }
 
-impl<T: record::Record> State<T> {
+impl<'a> State<'a> {
     pub fn new(timeline_options: timeline::TimelineOptions) -> Self {
         Self {
             topics: Default::default(),
-            options: timeline_options,
+            timeline_options,
         }
     }
 
-    pub fn get(&self, topic: &str) -> Option<&timeline::Timeline<T>> {
-        self.topics.get(topic)
+    pub fn subscribe<T, S>(&mut self, topic_path: String, subscription: S)
+    where
+        S: FnMut(timeline::Timestamp, &timeline::Timeline<T>) + 'a,
+        T: record::Record + 'a,
+    {
+        self.topics.insert(
+            topic_path,
+            topic::TopicSubscription::new(self.timeline_options, subscription),
+        );
     }
 
-    pub fn get_mut(&mut self, topic: &str) -> Option<&mut timeline::Timeline<T>> {
-        self.topics.get_mut(topic)
-    }
-
-    pub fn emplace(&mut self, topic: String) -> &mut timeline::Timeline<T> {
-        self.topics
-            .entry(topic)
-            .or_insert_with(|| timeline::Timeline::new(self.options.clone()))
+    pub fn poll(&mut self, ts: timeline::Timestamp) {
+        self.topics.iter_mut().for_each(|(_, topic)| topic.poll(ts))
     }
 }
