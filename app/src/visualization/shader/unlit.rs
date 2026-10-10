@@ -1,6 +1,6 @@
 use super::ext::Shader;
 use crate::visualization::{
-    instance, texture, transform_frame,
+    instance, texture, transform,
     vertex::{self, Vertex},
 };
 use lib::render;
@@ -20,7 +20,7 @@ impl Unlit {
     pub fn new(
         device: &wgpu::Device,
         handle: &render::Handle,
-        transform_frames_init: &[transform_frame::TransformFrame],
+        transform_frames_init: &[transform::TransformFrame],
         mvp_init: glam::Mat4,
     ) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -158,6 +158,18 @@ impl Unlit {
 
     pub fn set_mvp(&mut self, queue: &wgpu::Queue, mvp: glam::Mat4) {
         queue.write_buffer(&self.mvp_buffer, 0, bytemuck::cast_slice(&[mvp]));
+    }
+
+    pub fn set_transform_frames_buffer(
+        &mut self,
+        queue: &wgpu::Queue,
+        transform_frames: &[transform_frame::TransformFrame],
+    ) {
+        queue.write_buffer(
+            &self.transform_frames_buffer,
+            0,
+            bytemuck::cast_slice(transform_frames),
+        );
     }
 }
 

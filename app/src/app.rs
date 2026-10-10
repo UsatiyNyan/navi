@@ -1,11 +1,10 @@
-use lib::{buffer, render, tea};
+use super::visualization::transform;
+use lib::{buffer, tea};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Message {}
 
 pub(crate) struct Model {}
-
-pub(crate) struct RecordState {}
 
 impl tea::Model<Message> for Model {
     fn init() -> (Self, tea::Effects<Message>) {
@@ -17,13 +16,27 @@ impl tea::Model<Message> for Model {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Record {}
+pub(crate) struct Completion {
+    transform_tree: transform::TransformTreeCompletion,
+}
 
-impl buffer::Record for Record {
-    fn merge(&mut self, _other: Record) {}
+impl Completion {
+    pub fn transform_subscription(
+        &mut self,
+        timeline: &buffer::Timeline<Completion, transform::TransformFrameRecord>,
+        ts: buffer::Timestamp,
+    ) {
+        timeline.query_with(
+            self,
+            ts,
+            |_, _| true,
+            |c, _| c.transform_tree.requested.is_empty(),
+        );
+    }
+}
 
-    fn combine(&self, _other: &Record) -> Record {
-        _other.clone()
+impl buffer::Record<Completion> for transform::TransformFrameRecord {
+    fn accum(&self, completion: &mut Completion) {
+        self.accum(&mut completion.transform_tree);
     }
 }
