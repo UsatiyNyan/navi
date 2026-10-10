@@ -19,8 +19,8 @@ impl<'a, C> State<'a, C> {
 
     pub fn subscribe<T, S>(&mut self, topic_path: String, subscription: S)
     where
-        S: FnMut(&mut C, &timeline::Timeline<T>, timeline::Timestamp) + 'a,
-        T: record::Record + 'a,
+        S: FnMut(&mut C, &timeline::Timeline<C, T>, timeline::Timestamp) + 'a,
+        T: record::Record<C> + 'a,
     {
         self.topics.insert(
             topic_path,

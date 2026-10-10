@@ -2,8 +2,8 @@ use super::record::{Record, RecordNode};
 pub use jiff::{SignedDuration as Duration, Timestamp};
 use std::collections::{BTreeMap, btree_map::Entry};
 
-pub struct Timeline<T: Record> {
-    tree: BTreeMap<Timestamp, RecordNode<T>>,
+pub struct Timeline<C, R: Record<C>> {
+    tree: BTreeMap<Timestamp, RecordNode<C, R>>,
     window: Duration,
 }
 
@@ -12,7 +12,7 @@ pub struct TimelineOptions {
     pub window: Duration,
 }
 
-impl<T: Record> Timeline<T> {
+impl<C, R: Record<C>> Timeline<C, R> {
     pub const fn new(options: TimelineOptions) -> Self {
         Self {
             tree: BTreeMap::new(),
@@ -20,39 +20,41 @@ impl<T: Record> Timeline<T> {
         }
     }
 
-    pub fn query(&self, ts: Timestamp) -> Option<T> {
-        self.query_with(ts, |_| true, |v| v.record_type.is_snapshot())
+    pub fn query(&self, completion: &mut C, ts: Timestamp) {
+        self.query_with(
+            completion,
+            ts,
+            |_, _| true,
+            |_, v| v.record_type.is_snapshot(),
+        )
     }
 
     pub fn query_with<P1, P2>(
         &self,
+        completion: &mut C,
         ts: Timestamp,
         precondition: P1,
         postcondition: P2,
-    ) -> Option<T>
-    where
-        P1: Fn(&RecordNode<T>) -> bool,
-        P2: Fn(&RecordNode<T>) -> bool,
+    ) where
+        P1: Fn(&C, &RecordNode<C, R>) -> bool,
+        P2: Fn(&C, &RecordNode<C, R>) -> bool,
     {
-        let mut acc: Option<RecordNode<T>> = None;
         for (_, v) in self.tree.range(..=ts).rev() {
-            if !precondition(v) {
+            if !precondition(completion, v) {
                 break;
             }
-            acc = Some(match acc {
-                Some(record) => record.combine(v),
-                None => v.clone(),
-            });
-            if !postcondition(v) {
+            v.record_value.accum(completion);
+            if !postcondition(completion, v) {
                 break;
             }
         }
-        acc.map(|x| x.record_value)
     }
 
-    pub fn insert(&mut self, ts: Timestamp, new_record_node: RecordNode<T>) {
+    pub fn insert(&mut self, ts: Timestamp, new_record_node: RecordNode<C, R>) {
         match self.tree.entry(ts) {
-            Entry::Occupied(entry) => entry.into_mut().merge(new_record_node),
+            Entry::Occupied(mut entry) => {
+                let _ = entry.insert(new_record_node);
+            }
             Entry::Vacant(entry) => {
                 entry.insert(new_record_node);
                 if let Some(first_entry) = self.tree.first_entry() {
