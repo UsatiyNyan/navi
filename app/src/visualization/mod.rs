@@ -3,7 +3,7 @@ mod instance;
 mod mesh;
 mod shader;
 mod texture;
-mod transform_frame;
+pub(crate) mod transform;
 mod vertex;
 
 use super::app;
@@ -23,7 +23,7 @@ pub struct Visualization {
 
     depth_texture: texture::Texture,
 
-    transform_frames: Vec<transform_frame::TransformFrame>,
+    transform_frames: Vec<transform::TransformFrame>,
     camera: camera::Camera,
 }
 
@@ -32,7 +32,7 @@ impl Visualization {
         let device = handle.device();
         let config = handle.config();
 
-        let transform_frames = vec![transform_frame::TransformFrame {
+        let transform_frames = vec![transform::TransformFrame {
             rotation: (0.0, 0.0, 0.0, 1.0).into(),
             translation: (0.0, 0.0, 0.0).into(),
             padding0: 0,
@@ -129,7 +129,7 @@ impl Visualization {
         &self,
         model: &app::Model,
         render_handle: &mut render::Handle,
-        buffer_state: &mut buffer::State<app::RecordState>,
+        buffer_state: &mut buffer::State<app::Completion>,
     ) -> anyhow::Result<()> {
         let mut frame = match render_handle.begin_frame() {
             Ok(frame) => frame,
