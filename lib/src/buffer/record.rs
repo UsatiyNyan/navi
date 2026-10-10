@@ -1,10 +1,7 @@
-pub trait Record: Clone {
-    fn merge(&mut self, other: Self) {
-        let _ = std::mem::replace(self, other);
-    }
-    fn combine(&self, other: &Self) -> Self {
-        other.clone()
-    }
+use std::marker::PhantomData;
+
+pub trait Record<C>: Clone {
+    fn accum(&self, completion: &mut C);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,36 +17,21 @@ impl RecordType {
     pub fn is_incremental(&self) -> bool {
         *self == RecordType::Incremental
     }
-    pub fn combine(&self, other: &Self) -> Self {
-        match (self, other) {
-            (RecordType::Snapshot, RecordType::Snapshot) => RecordType::Snapshot,
-            (_, _) => RecordType::Incremental,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
-pub struct RecordNode<T: Record> {
+pub struct RecordNode<C, T: Record<C>> {
     pub record_value: T,
     pub record_type: RecordType,
+    _completion: PhantomData<C>,
 }
 
-impl<T: Record> RecordNode<T> {
+impl<C, T: Record<C>> RecordNode<C, T> {
     pub fn new(record_value: T, record_type: RecordType) -> Self {
         Self {
             record_value,
             record_type,
+            _completion: PhantomData {},
         }
-    }
-
-    pub fn merge(&mut self, other: Self) {
-        self.record_value.merge(other.record_value);
-        self.record_type = self.record_type.combine(&other.record_type);
-    }
-
-    pub fn combine(&self, other: &Self) -> Self {
-        let combined_value = self.record_value.combine(&other.record_value);
-        let combined_type = self.record_type.combine(&other.record_type);
-        Self::new(combined_value, combined_type)
     }
 }

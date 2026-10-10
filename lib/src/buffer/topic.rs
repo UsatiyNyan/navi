@@ -8,10 +8,10 @@ pub trait Topic<C> {
 
 pub struct TopicSubscription<C, R, S>
 where
-    R: record::Record,
-    S: FnMut(&mut C, &timeline::Timeline<R>, timeline::Timestamp),
+    R: record::Record<C>,
+    S: FnMut(&mut C, &timeline::Timeline<C, R>, timeline::Timestamp),
 {
-    timeline: timeline::Timeline<R>,
+    timeline: timeline::Timeline<C, R>,
     subscription: S,
     _completion: PhantomData<C>,
 }
@@ -19,8 +19,8 @@ where
 impl<'a, C, R, S> TopicSubscription<C, R, S>
 where
     C: 'a,
-    R: record::Record + 'a,
-    S: FnMut(&mut C, &timeline::Timeline<R>, timeline::Timestamp) + 'a,
+    R: record::Record<C> + 'a,
+    S: FnMut(&mut C, &timeline::Timeline<C, R>, timeline::Timestamp) + 'a,
 {
     pub fn new(
         timeline_options: timeline::TimelineOptions,
@@ -36,8 +36,8 @@ where
 
 impl<C, R, S> Topic<C> for TopicSubscription<C, R, S>
 where
-    R: record::Record,
-    S: FnMut(&mut C, &timeline::Timeline<R>, timeline::Timestamp),
+    R: record::Record<C>,
+    S: FnMut(&mut C, &timeline::Timeline<C, R>, timeline::Timestamp),
 {
     fn poll(&mut self, completion: &mut C, ts: timeline::Timestamp) {
         (self.subscription)(completion, &self.timeline, ts)
