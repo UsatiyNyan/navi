@@ -23,7 +23,6 @@ pub struct Visualization {
 
     depth_texture: texture::Texture,
 
-    transform_frames: Vec<transform::TransformFrame>,
     camera: camera::Camera,
 }
 
@@ -32,11 +31,6 @@ impl Visualization {
         let device = handle.device();
         let config = handle.config();
 
-        let transform_frames = vec![transform::TransformFrame {
-            rotation: (0.0, 0.0, 0.0, 1.0).into(),
-            translation: (0.0, 0.0, 0.0).into(),
-            padding0: 0,
-        }];
         let camera = camera::Camera {
             eye: (1.0, 1.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
@@ -47,7 +41,7 @@ impl Visualization {
             zfar: 100.0,
         };
 
-        let shader = shader::Unlit::new(device, handle, &transform_frames, camera.mvp());
+        let shader = shader::Unlit::new(device, handle, camera.mvp());
 
         #[rustfmt::skip]
         const VERTICES: &[vertex::UnlitVertex] = 
@@ -120,17 +114,27 @@ impl Visualization {
             shader,
             scene,
             depth_texture,
-            transform_frames,
             camera,
         }
     }
 
     pub fn render(
-        &self,
+        &mut self,
         model: &app::Model,
         render_handle: &mut render::Handle,
         buffer_state: &mut buffer::State<app::Completion>,
     ) -> anyhow::Result<()> {
+        const TRANSFORM_FRAMES: &[transform::TransformFrame] = &[transform::TransformFrame {
+            rotation: [0.0, 0.0, 0.0, 1.0],
+            translation: [0.0, 0.0, 0.0],
+            padding0: 0,
+        }];
+        self.shader.set_transform_frames_buffer(
+            render_handle.device(),
+            render_handle.queue(),
+            TRANSFORM_FRAMES,
+        );
+
         let mut frame = match render_handle.begin_frame() {
             Ok(frame) => frame,
             Err(error) => match error {

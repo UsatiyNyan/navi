@@ -100,7 +100,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
             }
             we::WindowEvent::RedrawRequested => {
                 if let (Some(gpu_handle), Some(visualization)) =
-                    (self.render.gpu_handle(), &self.visualization)
+                    (self.render.gpu_handle(), &mut self.visualization)
                 {
                     if let Err(err) =
                         visualization.render(self.tea.model(), gpu_handle, &mut self.buffer)
