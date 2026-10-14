@@ -4,7 +4,9 @@ use lib::{buffer, tea};
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Message {}
 
-pub(crate) struct Model {}
+pub(crate) struct Model {
+    pub ts: buffer::Timestamp,
+}
 
 impl tea::Model<Message> for Model {
     fn init() -> (Self, tea::Effects<Message>) {
@@ -17,7 +19,7 @@ impl tea::Model<Message> for Model {
 }
 
 pub(crate) struct Completion {
-    transform_tree: transform::TransformTreeCompletion,
+    pub(crate) transform_tree: transform::TransformTreeCompletion,
 }
 
 impl Completion {
@@ -26,12 +28,7 @@ impl Completion {
         timeline: &buffer::Timeline<Completion, transform::TransformFrameRecord>,
         ts: buffer::Timestamp,
     ) {
-        timeline.query_with(
-            self,
-            ts,
-            |_, _| true,
-            |c, _| c.transform_tree.is_complete(),
-        );
+        timeline.query_with(self, ts, |_, _| true, |c, _| c.transform_tree.is_complete());
     }
 }
 

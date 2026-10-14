@@ -38,11 +38,32 @@ impl TransformTreeCompletion {
         child_transform: (glam::Quat, glam::Vec3),
     ) {
         self.requested.remove(&child_frame);
-        self.from_root.insert(child_frame, child_transform);
+        let (child_rotation, child_translation) = child_transform;
+        if let Some(orphans) = self.orphans.remove(&child_frame) {
+            for (orphan_frame, orphan_rotation, orphan_translation) in orphans {
+                let orphan_transform = combine_transforms(
+                    &child_rotation,
+                    &child_translation,
+                    &orphan_rotation,
+                    &orphan_translation,
+                );
+                self.insert_from_root(orphan_frame, orphan_transform);
+            }
+        }
+        match self.from_root.entry(child_frame) {
+            std::collections::hash_map::Entry::Occupied(_) => {}
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let _ = entry.insert(child_transform);
+            }
+        }
     }
 
     pub fn is_complete(&self) -> bool {
         self.requested.is_empty()
+    }
+
+    pub(crate) fn calc_frames(&self) -> Box<[TransformFrame]> {
+        todo!()
     }
 }
 
@@ -57,18 +78,6 @@ impl buffer::Record<TransformTreeCompletion> for TransformFrameRecord {
                 &self.translation,
             );
             completion.insert_from_root(self.child.clone(), (child_rotation, child_translation));
-
-            if let Some(orphans) = completion.orphans.remove(&self.child) {
-                for (orphan_frame, orphan_rotation, orphan_translation) in orphans {
-                    let orphan_transform = combine_transforms(
-                        &child_rotation,
-                        &child_translation,
-                        &orphan_rotation,
-                        &orphan_translation,
-                    );
-                    completion.insert_from_root(orphan_frame, orphan_transform);
-                }
-            }
         } else {
             completion
                 .orphans
