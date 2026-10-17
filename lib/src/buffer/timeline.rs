@@ -1,72 +1,39 @@
-use super::record::{Record, RecordNode};
 pub use jiff::{SignedDuration as Duration, Timestamp};
-use std::collections::{BTreeMap, btree_map::Entry};
+use std::{collections::BTreeMap, ops::RangeBounds};
 
-pub struct Timeline<C, R: Record<C>> {
-    tree: BTreeMap<Timestamp, RecordNode<C, R>>,
-    window: Duration,
+pub struct Timeline<T> {
+    tree: BTreeMap<Timestamp, T>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct TimelineOptions {
-    pub window: Duration,
-}
-
-impl<C, R: Record<C>> Timeline<C, R> {
-    pub const fn new(options: TimelineOptions) -> Self {
+impl<T> Timeline<T> {
+    pub const fn new() -> Self {
         Self {
             tree: BTreeMap::new(),
-            window: options.window,
         }
     }
 
-    pub fn query(&self, completion: &mut C, ts: Timestamp) {
-        self.query_with(
-            completion,
-            ts,
-            |_, _| true,
-            |_, v| v.record_type.is_snapshot(),
-        )
+    pub fn query_last(&self, ts: Timestamp) -> Option<(&Timestamp, &T)> {
+        self.tree.range(..=ts).last()
     }
 
-    pub fn query_with<P1, P2>(
-        &self,
-        completion: &mut C,
-        ts: Timestamp,
-        precondition: P1,
-        postcondition: P2,
-    ) where
-        P1: Fn(&C, &RecordNode<C, R>) -> bool,
-        P2: Fn(&C, &RecordNode<C, R>) -> bool,
+    pub fn query_range_from_end<'a, R>(
+        &'a self,
+        r: R,
+    ) -> impl DoubleEndedIterator<Item = (&'a Timestamp, &'a T)>
+    where
+        R: RangeBounds<Timestamp>,
     {
-        for (_, v) in self.tree.range(..=ts).rev() {
-            if !precondition(completion, v) {
-                break;
-            }
-            v.record_value.accum(completion);
-            if !postcondition(completion, v) {
-                break;
-            }
-        }
+        self.tree.range(r).rev()
     }
 
-    pub fn insert(&mut self, ts: Timestamp, new_record_node: RecordNode<C, R>) {
-        match self.tree.entry(ts) {
-            Entry::Occupied(mut entry) => {
-                let _ = entry.insert(new_record_node);
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(new_record_node);
-                if let Some(first_entry) = self.tree.first_entry() {
-                    if *first_entry.key() + self.window < ts {
-                        first_entry.remove_entry();
-                    } else if let Some(last_entry) = self.tree.last_entry() {
-                        if ts + self.window < *last_entry.key() {
-                            last_entry.remove_entry();
-                        }
-                    }
-                }
-            }
-        }
+    pub fn insert(&mut self, ts: Timestamp, value: T) -> Option<T> {
+        self.tree.insert(ts, value)
+    }
+
+    pub fn evict_around(&mut self, ts: Timestamp, window: Duration) {
+        let lower_bound = ts - window;
+        let upper_bound = ts + window + Duration::from_nanos(1);
+        self.tree = self.tree.split_off(&lower_bound);
+        let _ = self.tree.split_off(&upper_bound);
     }
 }
