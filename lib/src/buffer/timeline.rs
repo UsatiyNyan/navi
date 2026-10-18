@@ -19,6 +19,13 @@ impl<T> Timeline<T> {
         self.tree.range(..=ts).last()
     }
 
+    pub fn query_next(&self, ts: Timestamp) -> Option<(&Timestamp, &T)> {
+        use std::ops::Bound;
+        self.tree
+            .range((Bound::Excluded(ts), Bound::Unbounded))
+            .next()
+    }
+
     pub fn query_range_from_end<'a, R>(
         &'a self,
         r: R,
@@ -27,6 +34,13 @@ impl<T> Timeline<T> {
         R: RangeBounds<Timestamp>,
     {
         self.tree.range(r).rev()
+    }
+
+    pub fn query_around(
+        &self,
+        ts: Timestamp,
+    ) -> (Option<(&Timestamp, &T)>, Option<(&Timestamp, &T)>) {
+        (self.query_last(ts), self.query_next(ts))
     }
 
     pub fn insert(&mut self, ts: Timestamp, value: T) -> Option<T> {
@@ -97,6 +111,91 @@ mod tests {
         assert_eq!(timeline.query_last(at(25)), Some((&at(20), &20)));
         assert_eq!(timeline.query_last(at(30)), Some((&at(30), &30)));
         assert_eq!(timeline.query_last(at(99)), Some((&at(30), &30)));
+    }
+
+    #[test]
+    fn query_next_on_empty() {
+        let timeline = Timeline::<i64>::default();
+        assert_eq!(timeline.query_next(at(0)), None);
+    }
+
+    #[test]
+    fn query_next_is_strictly_after() {
+        let timeline = timeline(&[10, 20, 30]);
+        assert_eq!(timeline.query_next(at(0)), Some((&at(10), &10)));
+        assert_eq!(timeline.query_next(at(10)), Some((&at(20), &20)));
+        assert_eq!(timeline.query_next(at(25)), Some((&at(30), &30)));
+        assert_eq!(timeline.query_next(at(30)), None);
+        assert_eq!(timeline.query_next(at(99)), None);
+    }
+
+    #[test]
+    fn query_next_skips_sample_at_exact_ts_by_one_nanosecond() {
+        let ns = Duration::from_nanos(1);
+        let mut timeline = Timeline::default();
+        timeline.insert(at(1), "at");
+        timeline.insert(at(1) + ns, "after");
+        assert_eq!(timeline.query_next(at(1)), Some((&(at(1) + ns), &"after")));
+        assert_eq!(timeline.query_next(at(1) - ns), Some((&at(1), &"at")));
+    }
+
+    #[test]
+    fn query_next_at_timestamp_bounds() {
+        let mut timeline = Timeline::default();
+        timeline.insert(Timestamp::MIN, "min");
+        timeline.insert(Timestamp::MAX, "max");
+        assert_eq!(
+            timeline.query_next(Timestamp::MIN),
+            Some((&Timestamp::MAX, &"max"))
+        );
+        // nothing is strictly after MAX, even a sample at MAX itself
+        assert_eq!(timeline.query_next(Timestamp::MAX), None);
+    }
+
+    #[test]
+    fn query_around_on_empty() {
+        let timeline = Timeline::<i64>::default();
+        assert_eq!(timeline.query_around(at(0)), (None, None));
+    }
+
+    #[test]
+    fn query_around_brackets_ts() {
+        let timeline = timeline(&[10, 20, 30]);
+        // before the first sample
+        assert_eq!(timeline.query_around(at(5)), (None, Some((&at(10), &10))));
+        // between samples
+        assert_eq!(
+            timeline.query_around(at(15)),
+            (Some((&at(10), &10)), Some((&at(20), &20)))
+        );
+        // exact hit: last is the hit, next is the following sample
+        assert_eq!(
+            timeline.query_around(at(20)),
+            (Some((&at(20), &20)), Some((&at(30), &30)))
+        );
+        // exact hit on the newest sample
+        assert_eq!(timeline.query_around(at(30)), (Some((&at(30), &30)), None));
+        // after the last sample
+        assert_eq!(timeline.query_around(at(99)), (Some((&at(30), &30)), None));
+    }
+
+    #[test]
+    fn query_around_single_sample() {
+        let timeline = timeline(&[10]);
+        assert_eq!(timeline.query_around(at(9)), (None, Some((&at(10), &10))));
+        assert_eq!(timeline.query_around(at(10)), (Some((&at(10), &10)), None));
+        assert_eq!(timeline.query_around(at(11)), (Some((&at(10), &10)), None));
+    }
+
+    #[test]
+    fn query_around_never_returns_the_same_sample_twice() {
+        let timeline = timeline(&[1, 2, 3]);
+        for s in 0..=4 {
+            if let (Some((last, _)), Some((next, _))) = timeline.query_around(at(s)) {
+                assert!(last < next, "at {s}: {last} !< {next}");
+                assert!(*last <= at(s) && at(s) < *next);
+            }
+        }
     }
 
     #[test]
