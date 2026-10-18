@@ -193,26 +193,17 @@ impl Visualization {
         &mut self,
         model: &app::Model,
         render_handle: &mut render::Handle,
-        buffer_state: &mut buffer::State<app::Completion>,
+        // buffer_state: &mut buffer::State<app::Completion>,
     ) -> anyhow::Result<()> {
-        // TODO: collect all requested frames
-        let completion = {
-            let mut completion = app::Completion {
-                transform_tree: transform::TransformTreeCompletion::new(
-                    /*root_frame=*/ Default::default(),
-                    /*requested=*/ Default::default(),
-                ),
-            };
-            buffer_state.poll(&mut completion, model.ts);
-            completion
-        };
-
-        // TODO: calc only the amount of requested frames
-        let transform_frames = completion.transform_tree.calc_frames();
+        const TRANSFORM_FRAMES: &[transform::TransformFrame] = &[transform::TransformFrame {
+            rotation: [0.0, 0.0, 0.0, 1.0],
+            translation: [0.0, 0.0, 0.0],
+            padding0: 0,
+        }];
         self.shader.set_transform_frames_buffer(
             render_handle.device(),
             render_handle.queue(),
-            &transform_frames,
+            &TRANSFORM_FRAMES,
         );
 
         let mut frame = match render_handle.begin_frame() {

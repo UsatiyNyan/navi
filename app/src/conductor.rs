@@ -1,5 +1,5 @@
 use super::{app, visualization};
-use lib::{buffer, render, tea};
+use lib::{render, tea};
 use std::rc::Rc;
 use winit::{application as wa, event as we, event_loop as wel, window as ww};
 
@@ -12,7 +12,6 @@ pub(crate) enum ConductorMessage {
 pub(crate) struct Conductor {
     tea: tea::App<app::Model, app::Message>,
     render: render::Lifecycle,
-    buffer: buffer::State<'static, app::Completion>,
     spawner: Rc<dyn tea::Spawner>,
     event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
     visualization: Option<visualization::Visualization>,
@@ -29,13 +28,9 @@ impl Conductor {
         let spawner = settings.app.spawner.clone();
         let tea = tea::App::new(settings.app);
         let render = render::Lifecycle::new(settings.window_attributes);
-        let buffer = buffer::State::new(buffer::TimelineOptions {
-            window: buffer::Duration::from_secs(120),
-        });
         Self {
             tea,
             render,
-            buffer,
             spawner,
             event_loop_proxy: settings.event_loop_proxy,
             visualization: None,
@@ -102,11 +97,9 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                 if let (Some(gpu_handle), Some(visualization)) =
                     (self.render.gpu_handle(), &mut self.visualization)
                 {
-                    if let Err(err) = visualization.render(
-                        self.tea.model(),
-                        gpu_handle,
-                        &mut self.buffer,
-                    ) {
+                    if let Err(err) =
+                        visualization.render(self.tea.model(), gpu_handle/* , &mut self.buffer */)
+                    {
                         log::error!("{err}");
                     }
                 } else {

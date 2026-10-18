@@ -1,4 +1,3 @@
-use lib::buffer;
 use std::collections::{HashMap, HashSet};
 
 #[repr(C)]
@@ -65,25 +64,22 @@ impl TransformTreeCompletion {
     pub(crate) fn calc_frames(&self) -> Box<[TransformFrame]> {
         todo!()
     }
-}
 
-impl buffer::Record<TransformTreeCompletion> for TransformFrameRecord {
-    fn accum(&self, completion: &mut TransformTreeCompletion) {
-        if let Some((parent_rotation, parent_translation)) = completion.from_root.get(&self.parent)
-        {
+    fn accum(&mut self, frame: &TransformFrameRecord) {
+        if let Some((parent_rotation, parent_translation)) = self.from_root.get(&frame.parent) {
             let (child_rotation, child_translation) = combine_transforms(
                 parent_rotation,
                 parent_translation,
-                &self.rotation,
-                &self.translation,
+                &frame.rotation,
+                &frame.translation,
             );
-            completion.insert_from_root(self.child.clone(), (child_rotation, child_translation));
+            self.insert_from_root(frame.child.clone(), (child_rotation, child_translation));
         } else {
-            completion
-                .orphans
-                .entry(self.parent.clone())
-                .or_default()
-                .push((self.child.clone(), self.rotation, self.translation));
+            self.orphans.entry(frame.parent.clone()).or_default().push((
+                frame.child.clone(),
+                frame.rotation,
+                frame.translation,
+            ));
         }
     }
 }
