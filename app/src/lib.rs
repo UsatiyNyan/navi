@@ -1,6 +1,10 @@
+#[cfg(any(target_arch = "wasm32", feature = "native-cli"))]
 mod app;
+#[cfg(any(target_arch = "wasm32", feature = "native-cli"))]
 mod conductor;
+#[cfg(any(target_arch = "wasm32", feature = "native-cli"))]
 mod platform;
+#[cfg(any(target_arch = "wasm32", feature = "native-cli"))]
 mod visualization;
 
 #[cfg(target_arch = "wasm32")]
@@ -38,5 +42,51 @@ pub(crate) struct WasmLocalSpawner;
 impl lib::tea::Spawner for WasmLocalSpawner {
     fn spawn(&self, task: lib::tea::Task) {
         wasm_bindgen_futures::spawn_local(task);
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "native-cli"))]
+pub fn run_native() {
+    env_logger::init();
+
+    let event_loop = winit::event_loop::EventLoop::with_user_event()
+        .build()
+        .unwrap();
+    let event_loop_proxy = event_loop.create_proxy();
+
+    let spawner = std::rc::Rc::new(TokioSpawner::new());
+    let emitter = platform::WinitEmitter::new(event_loop_proxy.clone());
+
+    let mut conductor = conductor::Conductor::new(conductor::ConductorSettings {
+        app: lib::tea::AppSettings { spawner, emitter },
+        event_loop_proxy,
+        window_attributes: winit::window::Window::default_attributes(),
+    });
+
+    log::debug!("event_loop.run_app");
+    event_loop.run_app(&mut conductor).expect("run_app failed");
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "native-cli"))]
+pub(crate) struct TokioSpawner {
+    runtime: tokio::runtime::Runtime,
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "native-cli"))]
+impl TokioSpawner {
+    pub(crate) fn new() -> Self {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        Self { runtime }
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "native-cli"))]
+impl lib::tea::Spawner for TokioSpawner {
+    fn spawn(&self, task: lib::tea::Task) {
+        self.runtime.spawn(task);
     }
 }
