@@ -3,7 +3,7 @@ use super::{Duration, Interner, Timestamp};
 // repeats Timeline<T>
 // TODO: procmacro to reduce boilerplate
 pub trait TopicInterface {
-    fn evict_around(&mut self, ts: Timestamp, window: Duration);
+    fn evict_around(&mut self, ts: Timestamp, window: Duration, margin: usize);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -74,14 +74,6 @@ impl<D> TopicStore<D> {
     }
 }
 
-impl<D: TopicInterface> TopicStore<D> {
-    pub fn evict_around(&mut self, ts: Timestamp, window: Duration) {
-        for (_, topic_item) in self.iter_mut() {
-            topic_item.evict_around(ts, window);
-        }
-    }
-}
-
 pub enum TopicEntry<'a, D> {
     Occupied(TopicId, &'a mut D),
     Vacant(VacantTopicEntry<'a, D>),
@@ -110,10 +102,10 @@ mod tests {
     }
 
     impl TopicInterface for TestData {
-        fn evict_around(&mut self, ts: Timestamp, window: Duration) {
+        fn evict_around(&mut self, ts: Timestamp, window: Duration, margin: usize) {
             match self {
-                Self::A(tl) => tl.evict_around(ts, window),
-                Self::B(tl) => tl.evict_around(ts, window),
+                Self::A(tl) => tl.evict_around(ts, window, margin),
+                Self::B(tl) => tl.evict_around(ts, window, margin),
             }
         }
     }
@@ -175,7 +167,7 @@ mod tests {
         assert_eq!(store.len(), 0);
         assert_eq!(store.lookup("/a"), None);
         assert_eq!(store.iter().count(), 0);
-        store.evict_around(at(0), Duration::from_secs(1));
+        assert_eq!(store.iter_mut().count(), 0);
     }
 
     #[test]
@@ -301,17 +293,23 @@ mod tests {
     }
 
     #[test]
-    fn evict_around_reaches_every_topic() {
+    fn eviction_via_iter_mut_with_margin_chosen_per_variant() {
         let mut store = store();
         let busy = insert(&mut store, "/busy", a(&[(0, 0), (50, 50), (100, 100)]));
-        let stale = insert(&mut store, "/stale", b(&[(0, "old"), (1, "older")]));
+        let latched = insert(&mut store, "/latched", b(&[(0, "map")]));
 
-        store
-            .evict_around(at(100), Duration::from_secs(10));
+        // app-side policy: B is latched data and keeps its last sample before the window
+        for (_, d) in store.iter_mut() {
+            let margin = match d {
+                TestData::A(_) => 0,
+                TestData::B(_) => 1,
+            };
+            d.evict_around(at(100), Duration::from_secs(10), margin);
+        }
 
         assert_eq!(values_a(store.get(busy)), [100]);
-        assert_eq!(values_b(store.get(stale)), Vec::<&str>::new());
+        assert_eq!(values_b(store.get(latched)), ["map"]);
         assert_eq!(store.len(), 2);
-        assert_eq!(store.lookup("/stale"), Some(stale));
+        assert_eq!(store.lookup("/latched"), Some(latched));
     }
 }

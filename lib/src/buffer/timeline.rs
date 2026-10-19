@@ -47,14 +47,25 @@ impl<T> Timeline<T> {
         self.tree.insert(ts, value)
     }
 
-    pub fn evict_around(&mut self, ts: Timestamp, window: Duration) {
+    pub fn evict_around(&mut self, ts: Timestamp, window: Duration, margin: usize) {
         let lower_bound = ts.checked_sub(window).unwrap_or(Timestamp::MIN);
-        self.tree = self.tree.split_off(&lower_bound);
-        if let Ok(upper_bound) = ts
+        let upper_bound = ts
             .checked_add(window)
             .and_then(|x| x.checked_add(Duration::from_nanos(1)))
-        {
-            let _ = self.tree.split_off(&upper_bound);
+            .ok();
+
+        let first_kept = match margin.checked_sub(1) {
+            Some(n) => self.tree.range(..lower_bound).nth_back(n).map(|(k, _)| *k),
+            None => Some(lower_bound),
+        };
+        let first_dropped = upper_bound
+            .and_then(|upper_bound| self.tree.range(upper_bound..).nth(margin).map(|(k, _)| *k));
+
+        if let Some(first_kept) = first_kept {
+            self.tree = self.tree.split_off(&first_kept);
+        }
+        if let Some(first_dropped) = first_dropped {
+            let _ = self.tree.split_off(&first_dropped);
         }
     }
 }
@@ -223,7 +234,7 @@ mod tests {
     #[test]
     fn evict_around_keeps_inclusive_window() {
         let mut timeline = timeline(&[0, 1, 2, 3, 4, 5, 6]);
-        timeline.evict_around(at(3), Duration::from_secs(2));
+        timeline.evict_around(at(3), Duration::from_secs(2), 0);
         assert_eq!(keys(&timeline), [1, 2, 3, 4, 5]);
     }
 
@@ -237,7 +248,7 @@ mod tests {
         for ts in [lower - ns, lower, upper, upper + ns] {
             timeline.insert(ts, ());
         }
-        timeline.evict_around(at(10), window);
+        timeline.evict_around(at(10), window, 0);
         let kept: Vec<_> = timeline
             .query_range_from_end(..)
             .rev()
@@ -249,37 +260,37 @@ mod tests {
     #[test]
     fn evict_around_zero_window_keeps_only_exact_ts() {
         let mut timeline = timeline(&[1, 2, 3]);
-        timeline.evict_around(at(2), Duration::ZERO);
+        timeline.evict_around(at(2), Duration::ZERO, 0);
         assert_eq!(keys(&timeline), [2]);
     }
 
     #[test]
     fn evict_around_far_from_data_empties() {
         let mut before = timeline(&[10, 11, 12]);
-        before.evict_around(at(100), Duration::from_secs(5));
+        before.evict_around(at(100), Duration::from_secs(5), 0);
         assert_eq!(keys(&before), []);
 
         let mut after = timeline(&[10, 11, 12]);
-        after.evict_around(at(0), Duration::from_secs(5));
+        after.evict_around(at(0), Duration::from_secs(5), 0);
         assert_eq!(keys(&after), []);
     }
 
     #[test]
     fn evict_around_is_idempotent_and_handles_empty() {
         let mut empty = Timeline::<i64>::default();
-        empty.evict_around(at(0), Duration::from_secs(1));
+        empty.evict_around(at(0), Duration::from_secs(1), 0);
         assert_eq!(keys(&empty), []);
 
         let mut timeline = timeline(&[0, 1, 2, 3, 4]);
-        timeline.evict_around(at(2), Duration::from_secs(1));
-        timeline.evict_around(at(2), Duration::from_secs(1));
+        timeline.evict_around(at(2), Duration::from_secs(1), 0);
+        timeline.evict_around(at(2), Duration::from_secs(1), 0);
         assert_eq!(keys(&timeline), [1, 2, 3]);
     }
 
     #[test]
     fn evict_around_overflowing_window_keeps_everything() {
         let mut timeline = timeline(&[0, 1, 2]);
-        timeline.evict_around(at(0), Duration::MAX);
+        timeline.evict_around(at(0), Duration::MAX, 0);
         assert_eq!(keys(&timeline), [0, 1, 2]);
     }
 
@@ -291,12 +302,12 @@ mod tests {
 
         let mut low = timeline(&[0, 1, 2]);
         low.insert(near_min, -1);
-        low.evict_around(near_min, window);
+        low.evict_around(near_min, window, 0);
         assert_eq!(keys(&low), [-1]);
 
         let mut high = timeline(&[0, 1, 2]);
         high.insert(near_max, -1);
-        high.evict_around(near_max, window);
+        high.evict_around(near_max, window, 0);
         assert_eq!(keys(&high), [-1]);
     }
 
@@ -305,7 +316,7 @@ mod tests {
         let mut timeline = Timeline::default();
         timeline.insert(Timestamp::MIN, "min");
         timeline.insert(Timestamp::MAX, "max");
-        timeline.evict_around(Timestamp::MAX, Duration::ZERO);
+        timeline.evict_around(Timestamp::MAX, Duration::ZERO, 0);
         let kept: Vec<_> = timeline.query_range_from_end(..).map(|(_, v)| *v).collect();
         assert_eq!(kept, ["max"]);
     }
@@ -313,10 +324,84 @@ mod tests {
     #[test]
     fn insert_after_evict_outside_window_is_kept_until_next_evict() {
         let mut timeline = timeline(&[1, 2, 3]);
-        timeline.evict_around(at(2), Duration::from_secs(1));
+        timeline.evict_around(at(2), Duration::from_secs(1), 0);
         timeline.insert(at(50), 50);
         assert_eq!(keys(&timeline), [1, 2, 3, 50]);
-        timeline.evict_around(at(2), Duration::from_secs(1));
+        timeline.evict_around(at(2), Duration::from_secs(1), 0);
         assert_eq!(keys(&timeline), [1, 2, 3]);
+    }
+
+    fn evicted(secs: &[i64], ts: i64, window: i64, margin: usize) -> Vec<i64> {
+        let mut timeline = timeline(secs);
+        timeline.evict_around(at(ts), Duration::from_secs(window), margin);
+        keys(&timeline)
+    }
+
+    #[test]
+    fn evict_around_margin_keeps_that_many_samples_on_each_side() {
+        let all = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        assert_eq!(evicted(&all, 4, 1, 0), [3, 4, 5]);
+        assert_eq!(evicted(&all, 4, 1, 1), [2, 3, 4, 5, 6]);
+        assert_eq!(evicted(&all, 4, 1, 2), [1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn evict_around_margin_larger_than_available_keeps_everything_on_that_side() {
+        let all = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        assert_eq!(evicted(&all, 4, 1, 99), all);
+        // only the lower side is short
+        assert_eq!(evicted(&[2, 3, 4, 5, 6, 7, 8], 4, 1, 2), [2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn evict_around_margin_keeps_hold_sample_when_window_has_no_sample_before_ts() {
+        // window [7, 17] holds 15 but nothing <= 12; hold-last at 12 needs 0
+        let mut held = timeline(&[0, 15]);
+        held.evict_around(at(12), Duration::from_secs(5), 1);
+        assert_eq!(keys(&held), [0, 15]);
+        assert_eq!(held.query_last(at(12)), Some((&at(0), &0)));
+
+        let mut dropped = timeline(&[0, 15]);
+        dropped.evict_around(at(12), Duration::from_secs(5), 0);
+        assert_eq!(dropped.query_last(at(12)), None);
+    }
+
+    #[test]
+    fn evict_around_margin_with_empty_window() {
+        // cursor after the data: keep the newest for hold-last
+        assert_eq!(evicted(&[10, 11, 12], 100, 5, 1), [12]);
+        // cursor before the data: keep the oldest
+        assert_eq!(evicted(&[10, 11, 12], 0, 5, 1), [10]);
+        // cursor in a gap: one on each side, for interpolation
+        assert_eq!(evicted(&[0, 1, 2, 20, 21, 22], 10, 2, 1), [2, 20]);
+    }
+
+    #[test]
+    fn evict_around_margin_counts_strictly_outside_the_window() {
+        // 3 sits exactly on the lower bound and 5 on the upper bound: both are inside,
+        // so the margin adds 2 and 6 on top
+        assert_eq!(evicted(&[1, 2, 3, 4, 5, 6, 7], 4, 1, 1), [2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn evict_around_margin_on_empty_and_idempotent() {
+        assert_eq!(evicted(&[], 0, 1, 3), Vec::<i64>::new());
+
+        let mut twice = timeline(&[0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        twice.evict_around(at(4), Duration::from_secs(1), 1);
+        twice.evict_around(at(4), Duration::from_secs(1), 1);
+        assert_eq!(keys(&twice), [2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn evict_around_margin_with_overflowing_window() {
+        assert_eq!(evicted(&[0, 1, 2], 0, i64::MAX / 2, 1), [0, 1, 2]);
+
+        // upper side overflows (nothing to cut), lower side still keeps one extra
+        let near_max = Timestamp::MAX - Duration::from_secs(1);
+        let mut high = timeline(&[0, 1, 2]);
+        high.insert(near_max, -1);
+        high.evict_around(near_max, Duration::from_secs(10), 1);
+        assert_eq!(keys(&high), [2, -1]);
     }
 }
