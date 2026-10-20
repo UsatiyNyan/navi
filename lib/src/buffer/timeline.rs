@@ -14,6 +14,14 @@ impl<T> Default for Timeline<T> {
     }
 }
 
+impl<T> FromIterator<(Timestamp, T)> for Timeline<T> {
+    fn from_iter<I: IntoIterator<Item = (Timestamp, T)>>(iter: I) -> Self {
+        Self {
+            tree: BTreeMap::from_iter(iter),
+        }
+    }
+}
+
 impl<T> Timeline<T> {
     pub fn query_last(&self, ts: Timestamp) -> Option<(&Timestamp, &T)> {
         self.tree.range(..=ts).last()
@@ -92,6 +100,23 @@ mod tests {
             .rev()
             .map(|(_, v)| *v)
             .collect()
+    }
+
+    #[test]
+    fn from_iter_sorts_and_last_duplicate_wins() {
+        let timeline: Timeline<&str> = [(at(2), "b"), (at(1), "a"), (at(2), "c")]
+            .into_iter()
+            .collect();
+        let kept: Vec<_> = timeline
+            .query_range_from_end(..)
+            .rev()
+            .map(|(_, v)| *v)
+            .collect();
+        assert_eq!(kept, ["a", "c"]);
+        assert_eq!(
+            Timeline::<i64>::from_iter([]).query_last(Timestamp::MAX),
+            None
+        );
     }
 
     #[test]

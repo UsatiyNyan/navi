@@ -22,55 +22,49 @@ impl From<u32> for TopicId {
 }
 
 pub struct TopicStore<D> {
-    topic_names: Interner<TopicId>,
-    topic_items: Vec<D>,
+    names: Interner<TopicId>,
+    items: Vec<D>,
 }
 
 impl<D> Default for TopicStore<D> {
     fn default() -> Self {
         Self {
-            topic_names: Default::default(),
-            topic_items: Default::default(),
+            names: Default::default(),
+            items: Default::default(),
         }
     }
 }
 
 impl<D> TopicStore<D> {
     pub fn entry<'a>(&'a mut self, topic: &'a str) -> TopicEntry<'a, D> {
-        match self.topic_names.lookup(topic) {
+        match self.names.lookup(topic) {
             Some(id) => TopicEntry::Occupied(id, self.get_mut(id)),
             None => TopicEntry::Vacant(VacantTopicEntry(self, topic)),
         }
     }
     pub fn get(&self, id: TopicId) -> &D {
-        &self.topic_items[Into::<u32>::into(id) as usize]
+        &self.items[Into::<u32>::into(id) as usize]
     }
     pub fn get_mut(&mut self, id: TopicId) -> &mut D {
-        &mut self.topic_items[Into::<u32>::into(id) as usize]
+        &mut self.items[Into::<u32>::into(id) as usize]
     }
     pub fn iter(&self) -> impl Iterator<Item = (TopicId, &D)> {
-        std::iter::zip(
-            (0..self.len()).map(|x| TopicId(x as u32)),
-            &self.topic_items,
-        )
+        std::iter::zip((0..self.len()).map(|x| TopicId(x as u32)), &self.items)
     }
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (TopicId, &mut D)> {
-        std::iter::zip(
-            (0..self.len()).map(|x| TopicId(x as u32)),
-            &mut self.topic_items,
-        )
+        std::iter::zip((0..self.len()).map(|x| TopicId(x as u32)), &mut self.items)
     }
     pub fn lookup(&self, topic: &str) -> Option<TopicId> {
-        self.topic_names.lookup(topic)
+        self.names.lookup(topic)
     }
     pub fn name(&self, id: TopicId) -> &str {
-        self.topic_names.name(id)
+        self.names.name(id)
     }
     pub fn len(&self) -> usize {
-        self.topic_items.len()
+        self.items.len()
     }
     pub fn is_empty(&self) -> bool {
-        self.topic_items.is_empty()
+        self.items.is_empty()
     }
 }
 
@@ -83,10 +77,10 @@ pub struct VacantTopicEntry<'a, D>(&'a mut TopicStore<D>, &'a str);
 impl<'a, D> VacantTopicEntry<'a, D> {
     pub fn insert(self, data: D) -> (TopicId, &'a mut D) {
         let (store, topic) = (self.0, self.1);
-        debug_assert_eq!(store.topic_names.len(), store.topic_items.len());
-        let id = store.topic_names.intern(topic);
-        debug_assert_eq!(Into::<u32>::into(id) as usize, store.topic_items.len());
-        (id, store.topic_items.push_mut(data))
+        debug_assert_eq!(store.names.len(), store.items.len());
+        let id = store.names.intern(topic);
+        debug_assert_eq!(Into::<u32>::into(id) as usize, store.items.len());
+        (id, store.items.push_mut(data))
     }
 }
 
@@ -149,8 +143,8 @@ mod tests {
 
     fn store() -> TopicStore<TestData> {
         TopicStore {
-            topic_names: Interner::default(),
-            topic_items: Vec::new(),
+            names: Interner::default(),
+            items: Vec::new(),
         }
     }
 
