@@ -272,6 +272,15 @@ impl<T: Transform> TransformStore<T> {
     }
 }
 
+impl<T> Default for TransformStore<T> {
+    fn default() -> Self {
+        Self {
+            frames: Default::default(),
+            edges: Default::default(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum TransformEdgeAtError {
     NoSampleBefore,
