@@ -1,5 +1,5 @@
 test:
-    cargo test
+    cargo test --workspace --features app/native-cli
 
 checks:
     cargo check -p lib
