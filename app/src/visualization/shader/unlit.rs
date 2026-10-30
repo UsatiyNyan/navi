@@ -9,7 +9,7 @@ use wgpu::{self, util::DeviceExt};
 pub struct Unlit {
     render_pipeline: wgpu::RenderPipeline,
 
-    transform_frames_buffer: GpuBuffer<transform::TransformFrame>,
+    transform_frames_buffer: GpuBuffer<transform::GpuTransform>,
 
     mvp_buffer: wgpu::Buffer,
     mvp_bind_group: wgpu::BindGroup,
@@ -23,7 +23,7 @@ impl Unlit {
         });
 
         let transform_frames_buffer =
-            GpuBuffer::<transform::TransformFrame>::new(device, "Tranform Frames".into(), 0);
+            GpuBuffer::<transform::GpuTransform>::new(device, "Tranform Frames".into(), 0);
 
         // vvv mvp
         let mvp_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -129,7 +129,7 @@ impl Unlit {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        transform_frames: &[transform::TransformFrame],
+        transform_frames: &[transform::GpuTransform],
     ) {
         self.transform_frames_buffer
             .write_buffer(device, queue, transform_frames);

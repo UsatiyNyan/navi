@@ -130,7 +130,7 @@ impl Visualization {
         render_handle: &mut render::Handle,
         // buffer_state: &mut buffer::State<app::Completion>,
     ) -> anyhow::Result<()> {
-        const TRANSFORM_FRAMES: &[transform::TransformFrame] = &[transform::TransformFrame {
+        const TRANSFORM_FRAMES: &[transform::GpuTransform] = &[transform::GpuTransform {
             rotation: [0.0, 0.0, 0.0, 1.0],
             translation: [0.0, 0.0, 0.0],
             padding0: 0,

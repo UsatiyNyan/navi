@@ -1,105 +1,53 @@
-use std::collections::{HashMap, HashSet};
-
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct TransformFrame {
+pub struct GpuTransform {
     pub rotation: [f32; 4],
     pub translation: [f32; 3],
     pub padding0: u32,
 }
 
-#[derive(Debug, Clone)]
-pub struct TransformFrameRecord {
-    parent: String,
-    child: String,
-    rotation: glam::Quat,
-    translation: glam::Vec3,
-}
-
-pub struct TransformTreeCompletion {
-    requested: HashSet<String>,
-    orphans: HashMap<String, Vec<(String, glam::Quat, glam::Vec3)>>,
-    from_root: HashMap<String, (glam::Quat, glam::Vec3)>,
-}
-
-impl TransformTreeCompletion {
-    pub fn new(root_frame: String, requested: HashSet<String>) -> Self {
+impl From<&Transform> for GpuTransform {
+    fn from(value: &Transform) -> Self {
         Self {
-            requested,
-            orphans: Default::default(),
-            from_root: HashMap::from([(root_frame, (glam::Quat::IDENTITY, glam::Vec3::ZERO))]),
-        }
-    }
-
-    pub fn insert_from_root(
-        &mut self,
-        child_frame: String,
-        child_transform: (glam::Quat, glam::Vec3),
-    ) {
-        self.requested.remove(&child_frame);
-        let (child_rotation, child_translation) = child_transform;
-        if let Some(orphans) = self.orphans.remove(&child_frame) {
-            for (orphan_frame, orphan_rotation, orphan_translation) in orphans {
-                let orphan_transform = combine_transforms(
-                    &child_rotation,
-                    &child_translation,
-                    &orphan_rotation,
-                    &orphan_translation,
-                );
-                self.insert_from_root(orphan_frame, orphan_transform);
-            }
-        }
-        match self.from_root.entry(child_frame) {
-            std::collections::hash_map::Entry::Occupied(_) => {}
-            std::collections::hash_map::Entry::Vacant(entry) => {
-                let _ = entry.insert(child_transform);
-            }
-        }
-    }
-
-    pub fn is_complete(&self) -> bool {
-        self.requested.is_empty()
-    }
-
-    pub(crate) fn calc_frames(&self) -> Box<[TransformFrame]> {
-        todo!()
-    }
-
-    fn accum(&mut self, frame: &TransformFrameRecord) {
-        if let Some((parent_rotation, parent_translation)) = self.from_root.get(&frame.parent) {
-            let (child_rotation, child_translation) = combine_transforms(
-                parent_rotation,
-                parent_translation,
-                &frame.rotation,
-                &frame.translation,
-            );
-            self.insert_from_root(frame.child.clone(), (child_rotation, child_translation));
-        } else {
-            self.orphans.entry(frame.parent.clone()).or_default().push((
-                frame.child.clone(),
-                frame.rotation,
-                frame.translation,
-            ));
+            rotation: value.rotation.to_array().map(|x| x as f32),
+            translation: value.translation.to_array().map(|x| x as f32),
+            padding0: 0,
         }
     }
 }
 
-fn combine_transforms(
-    parent_rotation: &glam::Quat,
-    parent_translation: &glam::Vec3,
-    child_rotation: &glam::Quat,
-    child_translation: &glam::Vec3,
-) -> (glam::Quat, glam::Vec3) {
-    (
-        (parent_rotation * child_rotation).normalize(),
-        transform_point(parent_rotation, parent_translation, child_translation),
-    )
+#[derive(Debug, Clone, Copy)]
+pub struct Transform {
+    rotation: glam::DQuat,
+    translation: glam::DVec3,
 }
 
-fn transform_point(
-    rotation: &glam::Quat,
-    translation: &glam::Vec3,
-    point: &glam::Vec3,
-) -> glam::Vec3 {
-    (rotation * point) + translation
+impl lib::buffer::Transform for Transform {
+    fn identity() -> Self {
+        Self {
+            rotation: glam::DQuat::IDENTITY,
+            translation: glam::DVec3::ZERO,
+        }
+    }
+    // parent <- child * child <- x = parent <- x
+    fn compose(parent: Self, child: Self) -> Self {
+        Self {
+            rotation: (parent.rotation * child.rotation).normalize(),
+            translation: (parent.rotation * child.translation) + parent.translation,
+        }
+    }
+    fn inverse(self) -> Self {
+        // conjugate same as inverse for unit quats, which they are, see normalize
+        Self {
+            rotation: self.rotation.conjugate(),
+            translation: -(self.rotation.conjugate() * self.translation),
+        }
+    }
+    // t in [0, 1]; t = 0 -> a, t = 1 -> b
+    fn interpolate(a: Self, b: Self, t: f64) -> Self {
+        Self {
+            rotation: a.rotation.lerp(b.rotation, t),
+            translation: a.translation.lerp(b.translation, t),
+        }
+    }
 }
