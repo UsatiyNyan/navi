@@ -13,7 +13,7 @@ var<uniform> u_mvp: mat4x4<f32>;
 // TODO: batch vertex input in SSBO
 struct VertexInput {
     @location(0) position: vec3<f32>,
-    @location(1) color: vec3<f32>,
+    @location(1) color: vec4<f32>,
 };
 
 struct InstanceInput {
@@ -25,7 +25,7 @@ struct InstanceInput {
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
-    @location(0) color: vec3<f32>,
+    @location(0) color: vec4<f32>,
 };
 
 fn reconstruct_rotation(r: vec4<f32>) -> mat3x3<f32> {
@@ -84,6 +84,6 @@ fn vs_main(
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.color, 1.0);
+    return in.color;
 }
 

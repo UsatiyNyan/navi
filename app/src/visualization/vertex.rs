@@ -8,7 +8,18 @@ pub trait Vertex: bytemuck::Pod + bytemuck::Zeroable {
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct UnlitVertex {
     pub position: [f32; 3],
-    pub color: [f32; 3],
+    pub padding0: u32,
+    pub color: [f32; 4],
+}
+
+impl UnlitVertex {
+    pub fn new(position: [f32; 3], color: [f32; 4]) -> Self {
+        Self {
+            position,
+            padding0: 0,
+            color,
+        }
+    }
 }
 
 impl Vertex for UnlitVertex {
@@ -24,8 +35,8 @@ impl Vertex for UnlitVertex {
                     shader_location: 0,
                 },
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x3,
-                    offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: size_of::<[f32; 4]>() as wgpu::BufferAddress,
                     shader_location: 1,
                 },
             ],

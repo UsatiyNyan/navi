@@ -43,114 +43,41 @@ impl Visualization {
 
         let shader = shader::Unlit::new(device, handle, camera.mvp());
 
-        // #[rustfmt::skip]
-        const VERTICES: &[vertex::UnlitVertex] = {
-            let r = [1.0, 0.0, 0.0];
-            let g = [0.0, 1.0, 0.0];
-            let b = [0.0, 0.0, 1.0];
+        let vertices: &[vertex::UnlitVertex] = {
+            let r = [1.0, 0.0, 0.0, 1.0];
+            let g = [0.0, 1.0, 0.0, 1.0];
+            let b = [0.0, 0.0, 1.0, 1.0];
             type V = vertex::UnlitVertex;
             &[
-                V {
-                    position: [0.5, 0.5, 0.5],
-                    color: r,
-                }, // top right
-                V {
-                    position: [0.5, -0.5, 0.5],
-                    color: g,
-                }, // bottom right
-                V {
-                    position: [-0.5, -0.5, 0.5],
-                    color: r,
-                }, // bottom left
-                V {
-                    position: [-0.5, 0.5, 0.5],
-                    color: b,
-                }, // top left
+                V::new([0.5, 0.5, 0.5], r),   // top right
+                V::new([0.5, -0.5, 0.5], g),  // bottom right
+                V::new([-0.5, -0.5, 0.5], r), // bottom left
+                V::new([-0.5, 0.5, 0.5], b),  // top left
                 // right face
-                V {
-                    position: [0.5, 0.5, 0.5],
-                    color: g,
-                }, // top right
-                V {
-                    position: [0.5, -0.5, 0.5],
-                    color: r,
-                }, // bottom right
-                V {
-                    position: [0.5, -0.5, -0.5],
-                    color: g,
-                }, // bottom left
-                V {
-                    position: [0.5, 0.5, -0.5],
-                    color: b,
-                }, // top left
+                V::new([0.5, 0.5, 0.5], g),   // top right
+                V::new([0.5, -0.5, 0.5], r),  // bottom right
+                V::new([0.5, -0.5, -0.5], g), // bottom left
+                V::new([0.5, 0.5, -0.5], b),  // top left
                 // back face
-                V {
-                    position: [0.5, 0.5, -0.5],
-                    color: b,
-                }, // top right
-                V {
-                    position: [0.5, -0.5, -0.5],
-                    color: g,
-                }, // bottom right
-                V {
-                    position: [-0.5, -0.5, -0.5],
-                    color: b,
-                }, // bottom left
-                V {
-                    position: [-0.5, 0.5, -0.5],
-                    color: r,
-                }, // top left
+                V::new([0.5, 0.5, -0.5], b),   // top right
+                V::new([0.5, -0.5, -0.5], g),  // bottom right
+                V::new([-0.5, -0.5, -0.5], b), // bottom left
+                V::new([-0.5, 0.5, -0.5], r),  // top left
                 // left face
-                V {
-                    position: [-0.5, 0.5, -0.5],
-                    color: r,
-                }, // top right
-                V {
-                    position: [-0.5, -0.5, -0.5],
-                    color: g,
-                }, // bottom right
-                V {
-                    position: [-0.5, -0.5, 0.5],
-                    color: r,
-                }, // bottom left
-                V {
-                    position: [-0.5, 0.5, 0.5],
-                    color: b,
-                }, // top left
+                V::new([-0.5, 0.5, -0.5], r),  // top right
+                V::new([-0.5, -0.5, -0.5], g), // bottom right
+                V::new([-0.5, -0.5, 0.5], r),  // bottom left
+                V::new([-0.5, 0.5, 0.5], b),   // top left
                 // top face
-                V {
-                    position: [0.5, 0.5, 0.5],
-                    color: g,
-                }, // top right
-                V {
-                    position: [0.5, 0.5, -0.5],
-                    color: r,
-                }, // bottom right
-                V {
-                    position: [-0.5, 0.5, -0.5],
-                    color: g,
-                }, // bottom left
-                V {
-                    position: [-0.5, 0.5, 0.5],
-                    color: b,
-                }, // top left
+                V::new([0.5, 0.5, 0.5], g),   // top right
+                V::new([0.5, 0.5, -0.5], r),  // bottom right
+                V::new([-0.5, 0.5, -0.5], g), // bottom left
+                V::new([-0.5, 0.5, 0.5], b),  // top left
                 // bottom face
-                V {
-                    position: [0.5, -0.5, 0.5],
-                    color: b,
-                }, // top right
-                V {
-                    position: [0.5, -0.5, -0.5],
-                    color: g,
-                }, // bottom right
-                V {
-                    position: [-0.5, -0.5, -0.5],
-                    color: b,
-                }, // bottom left
-                V {
-                    position: [-0.5, -0.5, 0.5],
-                    color: r,
-                }, // top left
+                V::new([0.5, -0.5, 0.5], b),   // top right
+                V::new([0.5, -0.5, -0.5], g),  // bottom right
+                V::new([-0.5, -0.5, -0.5], b), // bottom left
+                V::new([-0.5, -0.5, 0.5], r),  // top left
             ]
         };
         const INDICES: &[u32] = &[
@@ -175,7 +102,7 @@ impl Visualization {
         });
 
         let scene = Scene {
-            mesh: mesh::Mesh::new(device, "cube".into(), VERTICES, INDICES),
+            mesh: mesh::Mesh::new(device, "cube".into(), vertices, INDICES),
             instance_buffer,
         };
 
