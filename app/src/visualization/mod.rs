@@ -13,13 +13,14 @@ use shader::UseShader;
 use wgpu::{self, util::DeviceExt};
 
 struct Scene {
-    mesh: mesh::Mesh,
+    mesh_id: mesh::MeshId,
     instance_buffer: wgpu::Buffer,
 }
 
 pub struct Visualization {
     shader: shader::Unlit,
     scene: Scene,
+    mesh_store: mesh::MeshStore,
 
     depth_texture: texture::Texture,
 
@@ -101,8 +102,14 @@ impl Visualization {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let mut mesh_store = mesh::MeshStore::default();
+        let mesh_id = match mesh_store.entry("cube") {
+            mesh::MeshEntry::Occupied(mesh_id) => mesh_id,
+            mesh::MeshEntry::Vacant(entry) => entry.insert(device, vertices, INDICES),
+        };
+
         let scene = Scene {
-            mesh: mesh::Mesh::new(device, "cube".into(), vertices, INDICES),
+            mesh_id,
             instance_buffer,
         };
 
@@ -111,6 +118,7 @@ impl Visualization {
         Self {
             shader,
             scene,
+            mesh_store,
             depth_texture,
             camera,
         }
@@ -175,7 +183,7 @@ impl Visualization {
                 });
             render_pass.set_shader(&self.shader);
             render_pass.set_vertex_buffer(1, self.scene.instance_buffer.slice(..));
-            render_pass.draw_mesh_instanced(&self.scene.mesh, 0..1);
+            render_pass.draw_mesh_instanced(&self.mesh_store.get(self.scene.mesh_id), 0..1);
         }
 
         render_handle.end_frame(frame.surface, frame.encoder);
