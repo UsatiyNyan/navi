@@ -1,4 +1,5 @@
 mod camera;
+pub(crate) mod data;
 mod instance;
 mod mesh;
 mod shader;
@@ -128,7 +129,7 @@ impl Visualization {
         &mut self,
         model: &app::Model,
         render_handle: &mut render::Handle,
-        // buffer_state: &mut buffer::State<app::Completion>,
+        buffer: &buffer::Buffer<data::Topic, transform::Transform>,
     ) -> anyhow::Result<()> {
         const TRANSFORM_FRAMES: &[transform::GpuTransform] = &[transform::GpuTransform {
             rotation: [0.0, 0.0, 0.0, 1.0],

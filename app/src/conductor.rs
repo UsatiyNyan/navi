@@ -1,5 +1,5 @@
 use super::{app, visualization};
-use lib::{render, tea};
+use lib::{buffer, render, tea};
 use std::rc::Rc;
 use winit::{application as wa, event as we, event_loop as wel, window as ww};
 
@@ -15,6 +15,7 @@ pub(crate) struct Conductor {
     spawner: Rc<dyn tea::Spawner>,
     event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
     visualization: Option<visualization::Visualization>,
+    buffer: buffer::Buffer<visualization::data::Topic, visualization::transform::Transform>,
 }
 
 pub(crate) struct ConductorSettings {
@@ -34,6 +35,7 @@ impl Conductor {
             spawner,
             event_loop_proxy: settings.event_loop_proxy,
             visualization: None,
+            buffer: Default::default(),
         }
     }
 }
@@ -98,7 +100,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                     (self.render.gpu_handle(), &mut self.visualization)
                 {
                     if let Err(err) =
-                        visualization.render(self.tea.model(), gpu_handle/* , &mut self.buffer */)
+                        visualization.render(self.tea.model(), gpu_handle, &self.buffer)
                     {
                         log::error!("{err}");
                     }
