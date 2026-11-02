@@ -1,4 +1,4 @@
-use super::{ext::Shader, gpu_buffer::GpuBuffer};
+use super::{ext::Shader, gpu_buffer::GpuBufferWithBinding};
 use crate::visualization::{
     instance, texture, transform,
     vertex::{self, Vertex},
@@ -9,7 +9,7 @@ use wgpu::{self, util::DeviceExt};
 pub struct Unlit {
     render_pipeline: wgpu::RenderPipeline,
 
-    transform_frames_buffer: GpuBuffer<transform::GpuTransform>,
+    transform_frames_buffer: GpuBufferWithBinding<transform::GpuTransform>,
 
     mvp_buffer: wgpu::Buffer,
     mvp_bind_group: wgpu::BindGroup,
@@ -21,9 +21,8 @@ impl Unlit {
             label: Some("unlit.wgsl"),
             source: wgpu::ShaderSource::Wgsl(include_str!("./unlit.wgsl").into()),
         });
-
         let transform_frames_buffer =
-            GpuBuffer::<transform::GpuTransform>::new(device, "Tranform Frames".into(), 0);
+            GpuBufferWithBinding::<transform::GpuTransform>::new(device, "Tranform Frames", 0);
 
         // vvv mvp
         let mvp_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -59,7 +58,7 @@ impl Unlit {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    Some(&transform_frames_buffer.bind_group_layout()),
+                    Some(&transform_frames_buffer.binding().bind_group_layout()),
                     Some(&mvp_bind_group_layout),
                 ],
                 immediate_size: 0,
@@ -132,7 +131,7 @@ impl Unlit {
         transform_frames: &[transform::GpuTransform],
     ) {
         self.transform_frames_buffer
-            .write_buffer(device, queue, transform_frames);
+            .write(device, queue, transform_frames);
     }
 }
 
@@ -142,7 +141,7 @@ impl Shader for Unlit {
     }
 
     fn bind_groups(&self, render_pass: &mut wgpu::RenderPass) {
-        render_pass.set_bind_group(0, self.transform_frames_buffer.bind_group(), &[]);
+        render_pass.set_bind_group(0, self.transform_frames_buffer.binding().bind_group(), &[]);
         render_pass.set_bind_group(1, &self.mvp_bind_group, &[]);
     }
 }
