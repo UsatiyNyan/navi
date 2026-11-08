@@ -1,3 +1,4 @@
+use super::{platform, visualization};
 use lib::{buffer, tea};
 
 #[derive(Debug, Clone, Copy)]
@@ -22,8 +23,16 @@ pub(crate) enum Playback {
     Paused,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum BufferPayload {
+    BufferPayload,
+    // TODO
+}
+
 impl tea::Model<Message> for Model {
-    fn init() -> (Self, tea::Effects<Message>) {
+    type Ext = platform::InjestExt;
+
+    fn init() -> (Self, tea::Effects<Message, Self::Ext>) {
         (
             Self {
                 playback: Playback::Paused,
@@ -35,7 +44,7 @@ impl tea::Model<Message> for Model {
         )
     }
 
-    fn update(&mut self, message: Message) -> tea::Effects<Message> {
+    fn update(&mut self, message: Message) -> tea::Effects<Message, Self::Ext> {
         match message {
             Message::Tick { dt } => {
                 if let (Some(cursor), Playback::Playing { speed }) = (self.cursor, self.playback) {
@@ -57,4 +66,11 @@ impl tea::Model<Message> for Model {
         }
         Default::default()
     }
+}
+
+pub(crate) fn injest(
+    buffer: &mut buffer::Buffer<visualization::data::Topic, visualization::transform::Transform>,
+    payload: BufferPayload,
+) -> Message {
+    todo!()
 }
