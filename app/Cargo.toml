@@ -18,6 +18,7 @@ path = "src/main.rs"
 required-features = ["native-cli"]
 
 [dependencies]
+proto.workspace = true
 anyhow.workspace = true
 jiff.workspace = true
 lib.workspace = true

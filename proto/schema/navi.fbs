@@ -1,0 +1,175 @@
+// Wire protocol for navi: publishers -> sink.
+//
+// Evolution rules (flatbuffers): only append new fields at the end of a table, never
+// reorder or remove; deprecate with `(deprecated)` instead. Structs are frozen once
+// published.
+
+namespace navi.proto;
+
+file_identifier "NAVI";
+
+// --- primitives (structs: fixed size, stored inline, contiguous in vectors) ---
+
+struct Time {
+  sec: long;
+  nsec: uint; // [0, 1e9)
+}
+
+struct FVec3 {
+  x: float;
+  y: float;
+  z: float;
+}
+
+struct DVec3 {
+  x: double;
+  y: double;
+  z: double;
+}
+
+// Unit quaternion, (x, y, z, w) order.
+struct FQuat {
+  x: float;
+  y: float;
+  z: float;
+  w: float;
+}
+
+struct DQuat {
+  x: double;
+  y: double;
+  z: double;
+  w: double;
+}
+
+// RGBA, 8 bits per channel.
+struct Color {
+  r: ubyte;
+  g: ubyte;
+  b: ubyte;
+  a: ubyte;
+}
+
+// How a message changes its topic's data.
+enum UpdateType: ubyte {
+  Snapshot = 0,    // replaces the topic's data (also the default when absent)
+  Incremental = 1, // appends to it
+}
+
+// --- vertices ---
+
+struct PointCloudVertex {
+  position: FVec3;
+  color: Color;
+}
+
+// TODO: material
+struct MeshVertex {
+  position: FVec3;
+  color: Color;
+}
+
+struct PathVertex {
+  position: FVec3;
+  color: Color;
+  width: float;
+}
+
+// --- transforms ---
+
+table Transform {
+  ts: Time;                       // absent: static
+  parent_frame_id: string (required); // relative to
+  child_frame_id: string (required);  // this frame
+  rotation: DQuat (required);
+  translation: DVec3 (required);
+}
+
+// --- topics ---
+
+// snapshot only
+table Pose {
+  ts: Time (required);
+  topic_id: string (required);
+  frame_id: string (required);
+  rotation: DQuat (required);
+  translation: DVec3 (required);
+}
+
+table PointCloud {
+  ts: Time (required);
+  topic_id: string (required);
+  update_type: UpdateType;
+  frame_id: string (required);
+  points: [PointCloudVertex];
+}
+
+table DynamicMesh {
+  ts: Time (required);
+  topic_id: string (required);
+  update_type: UpdateType;
+  frame_id: string (required);
+  vertices: [MeshVertex];
+  indices: [uint]; // triangle list into `vertices`
+}
+
+table StaticMeshInstance {
+  ts: Time (required);
+  topic_id: string (required);
+  update_type: UpdateType;
+  frame_id: string (required);
+  mesh_id: string (required); // a StaticMesh from Metadata; drawn once it has arrived
+  scale: FVec3 (required);
+  rotation: FQuat (required);
+  translation: FVec3 (required);
+}
+
+// Several polylines in one vertex array.
+// `starts[i]` is the index in `vertices` where polyline i begins; it ends where
+// polyline i + 1 begins, the last one at `vertices.length`.
+table Path {
+  ts: Time (required);
+  topic_id: string (required);
+  update_type: UpdateType;
+  frame_id: string (required);
+  vertices: [PathVertex];
+  starts: [uint];
+}
+
+// --- envelope ---
+
+table StaticMesh {
+  mesh_id: string (required);
+  vertices: [MeshVertex];
+  indices: [uint]; // triangle list into `vertices`
+}
+
+table LogMetadata {
+  start: Time; // absent: unknown
+  end: Time;   // absent: unknown or still recording
+}
+
+table Metadata {
+  log: LogMetadata;
+  meshes: [StaticMesh];
+}
+
+table Update {
+  transforms: [Transform];
+  poses: [Pose];
+  point_clouds: [PointCloud];
+  dynamic_meshes: [DynamicMesh];
+  static_meshes: [StaticMeshInstance];
+  paths: [Path];
+}
+
+union Body {
+  Metadata,
+  Update,
+}
+
+table Envelope {
+  body: Body (required);
+}
+
+root_type Envelope;

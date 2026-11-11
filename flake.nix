@@ -22,6 +22,7 @@
         extraBuildInputs = with pkgs; [
           just
           lld
+          flatbuffers
 
           # graphics
           wayland
