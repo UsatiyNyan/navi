@@ -7,7 +7,7 @@ use winit::{application as wa, event as we, event_loop as wel, window as ww};
 pub(crate) enum ConductorMessage {
     RenderInitialized(anyhow::Result<render::Handle>),
     Message(app::Message),
-    Injest(app::BufferPayload),
+    Ingest(app::BufferPayload),
 }
 
 pub(crate) struct Conductor {
@@ -20,7 +20,7 @@ pub(crate) struct Conductor {
 }
 
 pub(crate) struct ConductorSettings {
-    pub app: tea::AppSettings<app::Message, platform::InjestExt>,
+    pub app: tea::AppSettings<app::Message, platform::IngestExt>,
     pub event_loop_proxy: wel::EventLoopProxy<ConductorMessage>,
     pub window_attributes: ww::WindowAttributes,
 }
@@ -74,8 +74,8 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                 self.render.request_redraw();
             }
             ConductorMessage::Message(message) => self.tea.enqueue(message),
-            ConductorMessage::Injest(payload) => {
-                let message = app::injest(&mut self.buffer, payload);
+            ConductorMessage::Ingest(payload) => {
+                let message = app::ingest(&mut self.buffer, payload);
                 self.tea.enqueue(message);
             }
         }

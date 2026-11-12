@@ -30,7 +30,7 @@ pub(crate) enum BufferPayload {
 }
 
 impl tea::Model<Message> for Model {
-    type Ext = platform::InjestExt;
+    type Ext = platform::IngestExt;
 
     fn init() -> (Self, tea::Effects<Message, Self::Ext>) {
         (
@@ -68,7 +68,7 @@ impl tea::Model<Message> for Model {
     }
 }
 
-pub(crate) fn injest(
+pub(crate) fn ingest(
     buffer: &mut buffer::Buffer<visualization::data::Topic, visualization::transform::Transform>,
     payload: BufferPayload,
 ) -> Message {

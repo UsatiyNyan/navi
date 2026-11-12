@@ -25,20 +25,20 @@ impl lib::tea::Emitter<app::Message> for WinitEmitter {
     }
 }
 
-pub(crate) struct InjestExt {
+pub(crate) struct IngestExt {
     event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
 }
 
-impl InjestExt {
+impl IngestExt {
     pub(crate) fn new_ptr(
         event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
     ) -> lib::tea::ExtPtr<Self> {
-        lib::tea::ExtPtr::new(InjestExt { event_loop_proxy })
+        lib::tea::ExtPtr::new(IngestExt { event_loop_proxy })
     }
 
-    pub fn injest(&self, payload: app::BufferPayload) {
+    pub fn ingest(&self, payload: app::BufferPayload) {
         let _ = self
             .event_loop_proxy
-            .send_event(conductor::ConductorMessage::Injest(payload));
+            .send_event(conductor::ConductorMessage::Ingest(payload));
     }
 }
