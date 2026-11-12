@@ -2,6 +2,17 @@ use super::{platform, visualization};
 use lib::{buffer, tea};
 
 #[derive(Debug, Clone, Copy)]
+pub(crate) enum BufferPayload {
+    BufferPayload,
+    // TODO
+}
+
+#[derive(Default)]
+pub(crate) struct Resources {
+    pub buffer: buffer::Buffer<visualization::data::Topic, visualization::transform::Transform>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Message {
     Tick { dt: buffer::Duration },
     Scrub { cursor: buffer::Timestamp },
@@ -21,12 +32,6 @@ pub(crate) enum Playback {
     Live,
     Playing { speed: f64 },
     Paused,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum BufferPayload {
-    BufferPayload,
-    // TODO
 }
 
 impl tea::Model<Message> for Model {
@@ -68,9 +73,6 @@ impl tea::Model<Message> for Model {
     }
 }
 
-pub(crate) fn ingest(
-    buffer: &mut buffer::Buffer<visualization::data::Topic, visualization::transform::Transform>,
-    payload: BufferPayload,
-) -> Message {
+pub(crate) fn ingest(resources: &mut Resources, payload: BufferPayload) -> Message {
     todo!()
 }

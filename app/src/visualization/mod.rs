@@ -8,7 +8,7 @@ pub(crate) mod transform;
 mod vertex;
 
 use super::app;
-use lib::{buffer, render};
+use lib::render;
 use mesh::DrawMesh;
 use shader::UseShader;
 use wgpu::{self, util::DeviceExt};
@@ -129,7 +129,7 @@ impl Visualization {
         &mut self,
         model: &app::Model,
         render_handle: &mut render::Handle,
-        buffer: &buffer::Buffer<data::Topic, transform::Transform>,
+        resources: &app::Resources,
     ) -> anyhow::Result<()> {
         const TRANSFORM_FRAMES: &[transform::GpuTransform] = &[transform::GpuTransform {
             rotation: [0.0, 0.0, 0.0, 1.0],
