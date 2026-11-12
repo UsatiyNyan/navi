@@ -18,18 +18,10 @@ impl From<u32> for MeshId {
     }
 }
 
+#[derive(Default)]
 pub struct MeshStore {
     names: buffer::Interner<MeshId>,
     items: Vec<Mesh>,
-}
-
-impl Default for MeshStore {
-    fn default() -> Self {
-        Self {
-            names: Default::default(),
-            items: Default::default(),
-        }
-    }
 }
 
 impl MeshStore {

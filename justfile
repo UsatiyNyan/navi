@@ -2,9 +2,8 @@ test:
     cargo test --workspace --features app/native-cli
 
 checks:
-    cargo check -p lib
-    cargo check -p app
-    cargo check -p app --features native-cli
+    cargo clippy --workspace --all-targets --features app/native-cli -- -D warnings
+    cargo clippy -p app --lib --target wasm32-unknown-unknown -- -D warnings
 
 run-cli:
     cargo run -p app --features native-cli --bin app-cli

@@ -6,7 +6,7 @@ pub(crate) struct WinitEmitter {
 }
 
 impl WinitEmitter {
-    pub(crate) fn new(
+    pub(crate) fn new_ptr(
         event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
     ) -> lib::tea::EmitterPtr<app::Message> {
         #[cfg(target_arch = "wasm32")]
@@ -30,7 +30,7 @@ pub(crate) struct InjestExt {
 }
 
 impl InjestExt {
-    pub(crate) fn new(
+    pub(crate) fn new_ptr(
         event_loop_proxy: wel::EventLoopProxy<conductor::ConductorMessage>,
     ) -> lib::tea::ExtPtr<Self> {
         lib::tea::ExtPtr::new(InjestExt { event_loop_proxy })

@@ -91,13 +91,11 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
 
         match event {
             we::WindowEvent::CloseRequested => event_loop.exit(),
-            we::WindowEvent::Resized(size) => {
-                if self.render.resize(size) {
-                    // TODO: this smells
-                    if let Some(visualization) = &mut self.visualization {
-                        visualization.resize(self.render.gpu_handle().unwrap());
-                        self.render.request_redraw();
-                    }
+            we::WindowEvent::Resized(size) if self.render.resize(size) => {
+                // TODO: this smells
+                if let Some(visualization) = &mut self.visualization {
+                    visualization.resize(self.render.gpu_handle().unwrap());
+                    self.render.request_redraw();
                 }
             }
             we::WindowEvent::RedrawRequested => {

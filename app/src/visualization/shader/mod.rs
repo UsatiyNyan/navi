@@ -1,7 +1,7 @@
-mod gpu_buffer;
 mod ext;
+mod gpu_buffer;
 mod unlit;
 
-pub use gpu_buffer::*;
 pub use ext::*;
+pub use gpu_buffer::*;
 pub use unlit::*;

@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use wgpu;
 
 pub struct GpuBuffer<T> {
     label: String,
@@ -20,7 +19,7 @@ impl<T: bytemuck::Pod> GpuBuffer<T> {
         usage: wgpu::BufferUsages,
         capacity: u32,
     ) -> Self {
-        const { assert!(std::mem::size_of::<T>() % 4 == 0) };
+        const { assert!(std::mem::size_of::<T>().is_multiple_of(4)) };
         let buffer = Self::create_buffer(device, label, capacity as usize, usage);
         Self {
             label: label.into(),
@@ -65,7 +64,7 @@ impl<T: bytemuck::Pod> GpuBuffer<T> {
         usage: wgpu::BufferUsages,
     ) -> wgpu::Buffer {
         device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(&label),
+            label: Some(label),
             size: (capacity * size_of::<T>()) as wgpu::BufferAddress,
             usage: usage | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -117,7 +116,7 @@ impl GpuBinding {
         bind_group_layout: &wgpu::BindGroupLayout,
     ) -> wgpu::BindGroup {
         device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
+            layout: bind_group_layout,
             entries: &[wgpu::BindGroupEntry { binding, resource }],
             label: Some(&format!("{label} Group")),
         })

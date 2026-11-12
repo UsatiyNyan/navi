@@ -114,7 +114,7 @@ impl Visualization {
             instance_buffer,
         };
 
-        let depth_texture = texture::Texture::new_depth_texture(&device, config, "Depth Texture");
+        let depth_texture = texture::Texture::new_depth_texture(device, config, "Depth Texture");
 
         Self {
             shader,
@@ -139,7 +139,7 @@ impl Visualization {
         self.shader.set_transform_frames_buffer(
             render_handle.device(),
             render_handle.queue(),
-            &TRANSFORM_FRAMES,
+            TRANSFORM_FRAMES,
         );
 
         let mut frame = match render_handle.begin_frame() {
@@ -184,7 +184,7 @@ impl Visualization {
                 });
             render_pass.set_shader(&self.shader);
             render_pass.set_vertex_buffer(1, self.scene.instance_buffer.slice(..));
-            render_pass.draw_mesh_instanced(&self.mesh_store.get(self.scene.mesh_id), 0..1);
+            render_pass.draw_mesh_instanced(self.mesh_store.get(self.scene.mesh_id), 0..1);
         }
 
         render_handle.end_frame(frame.surface, frame.encoder);

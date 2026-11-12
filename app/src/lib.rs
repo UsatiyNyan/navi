@@ -22,8 +22,8 @@ pub fn start(canvas: web_sys::HtmlCanvasElement) {
     let event_loop_proxy = event_loop.create_proxy();
 
     let spawner = std::rc::Rc::new(WasmLocalSpawner {});
-    let emitter = platform::WinitEmitter::new(event_loop_proxy.clone());
-    let ext = platform::InjestExt::new(event_loop_proxy.clone());
+    let emitter = platform::WinitEmitter::new_ptr(event_loop_proxy.clone());
+    let ext = platform::InjestExt::new_ptr(event_loop_proxy.clone());
 
     use winit::platform::web::WindowAttributesExtWebSys;
     let conductor = conductor::Conductor::new(conductor::ConductorSettings {
@@ -60,8 +60,8 @@ pub fn run_native() {
     let event_loop_proxy = event_loop.create_proxy();
 
     let spawner = std::rc::Rc::new(TokioSpawner::new());
-    let emitter = platform::WinitEmitter::new(event_loop_proxy.clone());
-    let ext = platform::InjestExt::new(event_loop_proxy.clone());
+    let emitter = platform::WinitEmitter::new_ptr(event_loop_proxy.clone());
+    let ext = platform::InjestExt::new_ptr(event_loop_proxy.clone());
 
     let mut conductor = conductor::Conductor::new(conductor::ConductorSettings {
         app: lib::tea::AppSettings {

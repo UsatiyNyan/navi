@@ -7,6 +7,7 @@ pub enum HostState {
     Suspended,
 }
 
+#[allow(clippy::large_enum_variant)] // NotStarted
 pub enum GpuState {
     NotStarted(ww::WindowAttributes),
     Initializing,

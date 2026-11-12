@@ -58,7 +58,7 @@ impl Unlit {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    Some(&transform_frames_buffer.binding().bind_group_layout()),
+                    Some(transform_frames_buffer.binding().bind_group_layout()),
                     Some(&mvp_bind_group_layout),
                 ],
                 immediate_size: 0,

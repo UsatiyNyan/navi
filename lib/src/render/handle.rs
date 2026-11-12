@@ -150,11 +150,11 @@ impl Handle {
                 label: Some("Render Encoder"),
             });
 
-        return Ok(BeginFrame {
+        Ok(BeginFrame {
             surface,
             view,
             encoder,
-        });
+        })
     }
 
     pub fn end_frame(&self, surface: wgpu::SurfaceTexture, encoder: wgpu::CommandEncoder) {

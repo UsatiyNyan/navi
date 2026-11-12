@@ -34,16 +34,14 @@ impl<T> Timeline<T> {
             .next()
     }
 
-    pub fn query_range_from_end<'a, R>(
-        &'a self,
-        r: R,
-    ) -> impl DoubleEndedIterator<Item = (&'a Timestamp, &'a T)>
+    pub fn query_range_from_end<R>(&self, r: R) -> impl DoubleEndedIterator<Item = (&Timestamp, &T)>
     where
         R: RangeBounds<Timestamp>,
     {
         self.tree.range(r).rev()
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn query_around(
         &self,
         ts: Timestamp,

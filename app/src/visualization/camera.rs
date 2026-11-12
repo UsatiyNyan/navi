@@ -19,6 +19,6 @@ impl Camera {
 
         let view = glam::camera::rh::view::look_at_mat4(self.eye, self.target, self.up);
         let proj = perspective(self.fovy, self.aspect, self.znear, self.zfar);
-        return proj * view;
+        proj * view
     }
 }

@@ -50,10 +50,15 @@
                 "fbs"
               ];
 
-              lsp.servers.rust_analyzer.settings.cargo = {
-                # target = "wasm32-unknown-unknown";
-                target = "x86_64-unknown-linux-gnu";
-                features = ["native-cli"];
+              lsp.servers.rust_analyzer.settings = {
+                cargo = {
+                  # target = "wasm32-unknown-unknown";
+                  target = "x86_64-unknown-linux-gnu";
+                  features = ["native-cli"];
+                };
+                check = {
+                  command = "clippy";
+                };
               };
             };
           })
