@@ -1,4 +1,7 @@
-use super::{platform, visualization};
+use super::{
+    platform,
+    visualization::{self, mesh},
+};
 use lib::{buffer, tea};
 
 #[derive(Debug, Clone, Copy)]
@@ -10,6 +13,7 @@ pub(crate) enum BufferPayload {
 #[derive(Default)]
 pub(crate) struct Resources {
     pub buffer: buffer::Buffer<visualization::data::Topic, visualization::transform::Transform>,
+    pub mesh_store: mesh::MeshStore,
 }
 
 #[derive(Debug, Clone, Copy)]

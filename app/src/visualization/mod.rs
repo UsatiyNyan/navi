@@ -1,7 +1,7 @@
 mod camera;
 pub(crate) mod data;
 mod instance;
-mod mesh;
+pub(crate) mod mesh;
 mod shader;
 mod texture;
 pub(crate) mod transform;
@@ -105,7 +105,7 @@ impl Visualization {
 
         let mut mesh_store = mesh::MeshStore::default();
         let mesh_id = match mesh_store.entry("cube") {
-            mesh::MeshEntry::Occupied(mesh_id) => mesh_id,
+            mesh::MeshEntry::Occupied(entry) => entry.id(),
             mesh::MeshEntry::Vacant(entry) => entry.insert(device, vertices, INDICES),
         };
 
@@ -184,7 +184,10 @@ impl Visualization {
                 });
             render_pass.set_shader(&self.shader);
             render_pass.set_vertex_buffer(1, self.scene.instance_buffer.slice(..));
-            render_pass.draw_mesh_instanced(self.mesh_store.get(self.scene.mesh_id), 0..1);
+
+            if let Some(mesh) = self.mesh_store.get(self.scene.mesh_id) {
+                render_pass.draw_mesh_instanced(mesh, 0..1);
+            }
         }
 
         render_handle.end_frame(frame.surface, frame.encoder);
