@@ -21,7 +21,8 @@ impl From<u32> for MeshId {
 #[derive(Default)]
 pub struct MeshStore {
     names: buffer::Interner<MeshId>,
-    items: Vec<Option<Mesh>>,
+    cpu_queue: Vec<(MeshId, CpuMesh)>,
+    gpu_items: Vec<Option<GpuMesh>>,
 }
 
 impl MeshStore {
@@ -32,8 +33,8 @@ impl MeshStore {
             None => MeshEntry::Vacant(VacantMeshEntry { store: self, label }),
         }
     }
-    pub fn get(&self, id: MeshId) -> Option<&Mesh> {
-        self.items
+    pub fn get(&self, id: MeshId) -> Option<&GpuMesh> {
+        self.gpu_items
             .get(Into::<u32>::into(id) as usize)
             .and_then(Option::as_ref)
     }
@@ -44,24 +45,48 @@ impl MeshStore {
         self.names.name(id)
     }
     pub fn len(&self) -> usize {
-        self.items.len()
+        self.gpu_items.len()
     }
     pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
+        self.gpu_items.is_empty()
     }
 
-    fn insert_impl(&mut self, label: &str, value: Option<Mesh>) -> MeshId {
-        debug_assert_eq!(self.names.len(), self.items.len());
-        let id = self.names.intern(label);
-        debug_assert_eq!(Into::<u32>::into(id) as usize, self.items.len());
-        self.items.push(value);
+    fn insert_impl(&mut self, label: &str, value: CpuMesh) -> MeshId {
+        let id = self.reserve_impl(label);
+        self.cpu_queue.push((id, value));
         id
     }
-
-    fn assign_impl(&mut self, id: MeshId, value: Option<Mesh>) -> Option<Mesh> {
+    fn reserve_impl(&mut self, label: &str) -> MeshId {
+        debug_assert_eq!(self.names.len(), self.gpu_items.len());
+        let id = self.names.intern(label);
+        debug_assert_eq!(Into::<u32>::into(id) as usize, self.gpu_items.len());
+        self.gpu_items.push(None);
+        id
+    }
+    fn assign_impl(&mut self, id: MeshId, value: CpuMesh) -> Option<GpuMesh> {
+        let prev = self.reset_impl(id);
+        self.cpu_queue.push((id, value));
+        prev
+    }
+    fn reset_impl(&mut self, id: MeshId) -> Option<GpuMesh> {
         let index = Into::<u32>::into(id) as usize;
-        debug_assert!(index < self.items.len());
-        std::mem::replace(&mut self.items[index], value)
+        debug_assert!(index < self.gpu_items.len());
+        std::mem::replace(&mut self.gpu_items[index], None)
+    }
+
+    pub fn upload(&mut self, device: &wgpu::Device) {
+        for (id, cpu_mesh) in &self.cpu_queue {
+            let label = self.label(*id);
+            let gpu_mesh = match &cpu_mesh.vertices {
+                CpuVertices::Unlit(vertices) => {
+                    GpuMesh::new(device, label, &vertices, &cpu_mesh.indices)
+                }
+            };
+            let index = Into::<u32>::into(*id) as usize;
+            debug_assert!(index < self.gpu_items.len());
+            self.gpu_items[index] = Some(gpu_mesh);
+        }
+        self.cpu_queue.clear();
     }
 }
 
@@ -78,20 +103,25 @@ impl<'a> OccupiedMeshEntry<'a> {
     pub fn id(&self) -> MeshId {
         self.id
     }
-
-    pub fn value(&self) -> Option<&Mesh> {
+    pub fn value(&self) -> Option<&GpuMesh> {
         self.store.get(self.id)
     }
 
     pub fn assign<V: vertex::Vertex>(
         self,
-        device: &wgpu::Device,
-        vertices: &[V],
+        vertices: CpuVertices,
         indices: &[u32],
-    ) -> Option<Mesh> {
-        let label = self.store.label(self.id);
-        self.store
-            .assign_impl(self.id, Some(Mesh::new(device, label, vertices, indices)))
+    ) -> Option<GpuMesh> {
+        self.store.assign_impl(
+            self.id,
+            CpuMesh {
+                vertices,
+                indices: indices.into(),
+            },
+        )
+    }
+    pub fn reset(self) -> Option<GpuMesh> {
+        self.store.reset_impl(self.id)
     }
 }
 
@@ -100,31 +130,37 @@ pub struct VacantMeshEntry<'a> {
     label: &'a str,
 }
 impl<'a> VacantMeshEntry<'a> {
-    pub fn insert<V: vertex::Vertex>(
-        self,
-        device: &wgpu::Device,
-        vertices: &[V],
-        indices: &[u32],
-    ) -> MeshId {
+    pub fn insert(self, vertices: CpuVertices, indices: &[u32]) -> MeshId {
         self.store.insert_impl(
             self.label,
-            Some(Mesh::new(device, self.label, vertices, indices)),
+            CpuMesh {
+                vertices,
+                indices: indices.into(),
+            },
         )
     }
-
     pub fn reserve(self) -> MeshId {
-        self.store.insert_impl(self.label, None)
+        self.store.reserve_impl(self.label)
     }
 }
 
-pub struct Mesh {
+pub struct CpuMesh {
+    pub vertices: CpuVertices,
+    pub indices: Box<[u32]>,
+}
+
+pub enum CpuVertices {
+    Unlit(Box<[vertex::UnlitVertex]>),
+}
+
+pub struct GpuMesh {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
     pub index_count: u32,
     // TODO: material
 }
 
-impl Mesh {
+impl GpuMesh {
     fn new<V: vertex::Vertex>(
         device: &wgpu::Device,
         label: &str,
@@ -150,15 +186,15 @@ impl Mesh {
 }
 
 pub trait DrawMesh {
-    fn draw_mesh(&mut self, mesh: &Mesh) {
+    fn draw_mesh(&mut self, mesh: &GpuMesh) {
         self.draw_mesh_instanced(mesh, 0..1);
     }
 
-    fn draw_mesh_instanced(&mut self, mesh: &Mesh, instances: Range<u32>);
+    fn draw_mesh_instanced(&mut self, mesh: &GpuMesh, instances: Range<u32>);
 }
 
 impl<'a> DrawMesh for wgpu::RenderPass<'a> {
-    fn draw_mesh_instanced(&mut self, mesh: &Mesh, instances: Range<u32>) {
+    fn draw_mesh_instanced(&mut self, mesh: &GpuMesh, instances: Range<u32>) {
         self.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
         self.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
         self.draw_indexed(0..mesh.index_count, 0, instances);
