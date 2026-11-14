@@ -63,10 +63,8 @@ impl MeshStore {
         self.gpu_items.push(None);
         id
     }
-    fn assign_impl(&mut self, id: MeshId, value: CpuMesh) -> Option<GpuMesh> {
-        let prev = self.reset_impl(id);
+    fn assign_impl(&mut self, id: MeshId, value: CpuMesh) {
         self.cpu_queue.push((id, value));
-        prev
     }
     fn reset_impl(&mut self, id: MeshId) -> Option<GpuMesh> {
         let index = Into::<u32>::into(id) as usize;
@@ -75,18 +73,17 @@ impl MeshStore {
     }
 
     pub fn upload(&mut self, device: &wgpu::Device) {
-        for (id, cpu_mesh) in &self.cpu_queue {
-            let label = self.label(*id);
+        for (id, cpu_mesh) in self.cpu_queue.drain(..) {
+            let label = self.names.name(id);
             let gpu_mesh = match &cpu_mesh.vertices {
                 CpuVertices::Unlit(vertices) => {
                     GpuMesh::new(device, label, &vertices, &cpu_mesh.indices)
                 }
             };
-            let index = Into::<u32>::into(*id) as usize;
+            let index = Into::<u32>::into(id) as usize;
             debug_assert!(index < self.gpu_items.len());
             self.gpu_items[index] = Some(gpu_mesh);
         }
-        self.cpu_queue.clear();
     }
 }
 
@@ -107,7 +104,7 @@ impl<'a> OccupiedMeshEntry<'a> {
         self.store.get(self.id)
     }
 
-    pub fn assign(self, value: CpuMesh) -> Option<GpuMesh> {
+    pub fn assign(self, value: CpuMesh) {
         self.store.assign_impl(self.id, value)
     }
     pub fn reset(self) -> Option<GpuMesh> {
@@ -133,10 +130,10 @@ pub struct CpuMesh {
     pub indices: Box<[u32]>,
 }
 impl CpuMesh {
-    pub fn unlit(vertices: &[vertex::UnlitVertex], indices: &[u32]) -> Self {
+    pub fn unlit(vertices: Box<[vertex::UnlitVertex]>, indices: Box<[u32]>) -> Self {
         Self {
-            vertices: CpuVertices::Unlit(vertices.into()),
-            indices: indices.into(),
+            vertices: CpuVertices::Unlit(vertices),
+            indices,
         }
     }
 }

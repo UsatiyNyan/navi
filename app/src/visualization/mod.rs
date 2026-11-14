@@ -104,7 +104,9 @@ impl Visualization {
 
         let mesh_id = match resources.mesh_store.entry("cube") {
             mesh::MeshEntry::Occupied(entry) => entry.id(),
-            mesh::MeshEntry::Vacant(entry) => entry.insert(mesh::CpuMesh::unlit(vertices, INDICES)),
+            mesh::MeshEntry::Vacant(entry) => {
+                entry.insert(mesh::CpuMesh::unlit(vertices.into(), INDICES.into()))
+            }
         };
 
         let scene = Scene {
