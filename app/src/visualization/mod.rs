@@ -21,7 +21,6 @@ struct Scene {
 pub struct Visualization {
     shader: shader::Unlit,
     scene: Scene,
-    mesh_store: mesh::MeshStore,
 
     depth_texture: texture::Texture,
 
@@ -29,7 +28,7 @@ pub struct Visualization {
 }
 
 impl Visualization {
-    pub fn new(handle: &render::Handle) -> Self {
+    pub fn new(handle: &render::Handle, resources: &mut app::Resources) -> Self {
         let device = handle.device();
         let config = handle.config();
 
@@ -103,10 +102,9 @@ impl Visualization {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let mut mesh_store = mesh::MeshStore::default();
-        let mesh_id = match mesh_store.entry("cube") {
+        let mesh_id = match resources.mesh_store.entry("cube") {
             mesh::MeshEntry::Occupied(entry) => entry.id(),
-            mesh::MeshEntry::Vacant(entry) => entry.insert(device, vertices, INDICES),
+            mesh::MeshEntry::Vacant(entry) => entry.insert(mesh::CpuMesh::unlit(vertices, INDICES)),
         };
 
         let scene = Scene {
@@ -119,7 +117,6 @@ impl Visualization {
         Self {
             shader,
             scene,
-            mesh_store,
             depth_texture,
             camera,
         }
@@ -129,8 +126,10 @@ impl Visualization {
         &mut self,
         model: &app::Model,
         render_handle: &mut render::Handle,
-        resources: &app::Resources,
+        resources: &mut app::Resources,
     ) -> anyhow::Result<()> {
+        resources.mesh_store.upload(render_handle.device());
+
         const TRANSFORM_FRAMES: &[transform::GpuTransform] = &[transform::GpuTransform {
             rotation: [0.0, 0.0, 0.0, 1.0],
             translation: [0.0, 0.0, 0.0],
@@ -185,7 +184,7 @@ impl Visualization {
             render_pass.set_shader(&self.shader);
             render_pass.set_vertex_buffer(1, self.scene.instance_buffer.slice(..));
 
-            if let Some(mesh) = self.mesh_store.get(self.scene.mesh_id) {
+            if let Some(mesh) = resources.mesh_store.get(self.scene.mesh_id) {
                 render_pass.draw_mesh_instanced(mesh, 0..1);
             }
         }

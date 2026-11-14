@@ -69,7 +69,10 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
             ConductorMessage::RenderInitialized(handle) => {
                 self.render.initialize(handle);
                 if let Some(gpu_handle) = self.render.gpu_handle() {
-                    self.visualization = Some(visualization::Visualization::new(gpu_handle));
+                    self.visualization = Some(visualization::Visualization::new(
+                        gpu_handle,
+                        &mut self.resources,
+                    ));
                 }
                 self.render.request_redraw();
             }
@@ -103,7 +106,7 @@ impl wa::ApplicationHandler<ConductorMessage> for Conductor {
                     (self.render.gpu_handle(), &mut self.visualization)
                 {
                     if let Err(err) =
-                        visualization.render(self.tea.model(), gpu_handle, &self.resources)
+                        visualization.render(self.tea.model(), gpu_handle, &mut self.resources)
                     {
                         log::error!("{err}");
                     }

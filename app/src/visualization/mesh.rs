@@ -107,18 +107,8 @@ impl<'a> OccupiedMeshEntry<'a> {
         self.store.get(self.id)
     }
 
-    pub fn assign<V: vertex::Vertex>(
-        self,
-        vertices: CpuVertices,
-        indices: &[u32],
-    ) -> Option<GpuMesh> {
-        self.store.assign_impl(
-            self.id,
-            CpuMesh {
-                vertices,
-                indices: indices.into(),
-            },
-        )
+    pub fn assign(self, value: CpuMesh) -> Option<GpuMesh> {
+        self.store.assign_impl(self.id, value)
     }
     pub fn reset(self) -> Option<GpuMesh> {
         self.store.reset_impl(self.id)
@@ -130,14 +120,8 @@ pub struct VacantMeshEntry<'a> {
     label: &'a str,
 }
 impl<'a> VacantMeshEntry<'a> {
-    pub fn insert(self, vertices: CpuVertices, indices: &[u32]) -> MeshId {
-        self.store.insert_impl(
-            self.label,
-            CpuMesh {
-                vertices,
-                indices: indices.into(),
-            },
-        )
+    pub fn insert(self, value: CpuMesh) -> MeshId {
+        self.store.insert_impl(self.label, value)
     }
     pub fn reserve(self) -> MeshId {
         self.store.reserve_impl(self.label)
@@ -147,6 +131,14 @@ impl<'a> VacantMeshEntry<'a> {
 pub struct CpuMesh {
     pub vertices: CpuVertices,
     pub indices: Box<[u32]>,
+}
+impl CpuMesh {
+    pub fn unlit(vertices: &[vertex::UnlitVertex], indices: &[u32]) -> Self {
+        Self {
+            vertices: CpuVertices::Unlit(vertices.into()),
+            indices: indices.into(),
+        }
+    }
 }
 
 pub enum CpuVertices {
